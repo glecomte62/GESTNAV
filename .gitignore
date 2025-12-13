@@ -1,0 +1,64 @@
+# Environnement et config sensible
+.env
+.env.local
+.env.*
+config.php
+config_mail.php
+club_config.php
+auth.php
+
+# Dossiers système
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# PHP
+*.log
+error_log
+debug.log
+
+# Uploads et fichiers temporaires
+uploads/
+temp/
+tmp/
+cache/
+backups/
+
+# Node et npm
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+
+# Tests et development
+test_*.php
+debug_*.php
+.phpunit.result.cache
+phpunit.xml
+
+# IDE et Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Git
+.git
+.gitignore
+
+# Autres
+*.bak
+*.tmp
+*.old
+.deploy.config
+deploy_local.sh

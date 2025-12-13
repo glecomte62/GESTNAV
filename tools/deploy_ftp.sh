@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Config — à renseigner avant usage
-PROTO="ftp"                 # sftp | ftp | ftps
-FTP_HOST="ftp.votrehebergeur.fr"
-FTP_USER="votre_utilisateur_ftp"          # utilisateur FTP/SFTP
-FTP_PASS="VOTRE_MOT_DE_PASSE"         # mot de passe (ou utilisez un gestionnaire de secrets)
-FTP_PATH="/"  # dossier distant cible (doit exister)
+#########################
+# Charger la config locale si elle existe
+#########################
+BASEDIR_CONFIG="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
+if [[ -f "$BASEDIR_CONFIG/.deploy.config" ]]; then
+  source "$BASEDIR_CONFIG/.deploy.config"
+  PROTO="${FTP_PROTO:-ftp}"
+else
+  # Config par défaut — à renseigner si .deploy.config n'existe pas
+  PROTO="ftp"                 # sftp | ftp | ftps
+  FTP_HOST="ftp.votrehebergeur.fr"
+  FTP_USER="votre_utilisateur_ftp"
+  FTP_PASS="VOTRE_MOT_DE_PASSE"
+  FTP_PATH="/"
+fi
 
 #########################
 # Ne rien modifier dessous
