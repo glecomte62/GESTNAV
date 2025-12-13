@@ -1,0 +1,6 @@
+# Force default charset to UTF-8 for all content
+AddDefaultCharset UTF-8
+
+# Ensure Markdown files are served as UTF-8 plain text
+AddType 'text/plain; charset=UTF-8' .md
+AddCharset UTF-8 .md

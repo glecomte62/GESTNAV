@@ -1,0 +1,156 @@
+# GESTNAV - Configuration Apache
+
+# ============================================================================
+# SÉCURITÉ
+# ============================================================================
+
+# Bloquer l'accès aux fichiers sensibles
+<FilesMatch "^(config\.php|config\.sample\.php|club_config\.php|\.env|\.git.*|composer\.(json|lock))$">
+    Require all denied
+</FilesMatch>
+
+# Bloquer l'accès aux répertoires sensibles
+<DirectoryMatch "^.*/(\.git|\.vscode|setup|tools|node_modules|vendor)/.*$">
+    Require all denied
+</DirectoryMatch>
+
+# Désactiver le listing des répertoires
+Options -Indexes
+
+# Protection contre les injections
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Bloquer les requêtes avec des caractères suspects
+    RewriteCond %{QUERY_STRING} (\<|%3C).*script.*(\>|%3E) [NC,OR]
+    RewriteCond %{QUERY_STRING} GLOBALS(=|\[|\%[0-9A-Z]{0,2}) [OR]
+    RewriteCond %{QUERY_STRING} _REQUEST(=|\[|\%[0-9A-Z]{0,2})
+    RewriteRule ^(.*)$ index.php [F,L]
+</IfModule>
+
+# ============================================================================
+# HEADERS DE SÉCURITÉ
+# ============================================================================
+
+<IfModule mod_headers.c>
+    # Protection XSS
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Protection contre le clickjacking
+    Header set X-Frame-Options "SAMEORIGIN"
+    
+    # Protection contre le MIME sniffing
+    Header set X-Content-Type-Options "nosniff"
+    
+    # Politique de référent
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Content Security Policy (à adapter selon vos besoins)
+    # Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net;"
+</IfModule>
+
+# ============================================================================
+# COMPRESSION GZIP
+# ============================================================================
+
+<IfModule mod_deflate.c>
+    # Compresser les fichiers texte
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json application/xml
+</IfModule>
+
+# ============================================================================
+# CACHE NAVIGATEUR
+# ============================================================================
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Images
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
+    
+    # CSS et JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    
+    # Polices
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType font/otf "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType application/font-woff "access plus 1 year"
+    
+    # Documents
+    ExpiresByType application/pdf "access plus 1 month"
+    
+    # HTML
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# ============================================================================
+# CONFIGURATION PHP (si mod_php est activé)
+# ============================================================================
+
+<IfModule mod_php7.c>
+    # Taille maximum des fichiers uploadés
+    php_value upload_max_filesize 10M
+    php_value post_max_size 12M
+    
+    # Temps d'exécution
+    php_value max_execution_time 60
+    php_value max_input_time 60
+    
+    # Mémoire
+    php_value memory_limit 256M
+    
+    # Sessions
+    php_value session.gc_maxlifetime 7200
+    php_flag session.cookie_httponly On
+</IfModule>
+
+# ============================================================================
+# RÉÉCRITURE D'URL (optionnel)
+# ============================================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Redirection HTTPS (décommenter pour forcer HTTPS)
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    
+    # Redirection www vers non-www (ou inverse)
+    # RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+    # RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+</IfModule>
+
+# ============================================================================
+# PAGES D'ERREUR PERSONNALISÉES
+# ============================================================================
+
+ErrorDocument 404 /404.php
+ErrorDocument 403 /403.php
+ErrorDocument 500 /500.php
+
+# ============================================================================
+# PROTECTION DES UPLOADS
+# ============================================================================
+
+# Empêcher l'exécution de scripts dans le dossier uploads
+<DirectoryMatch "^.*/uploads/.*$">
+    <FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|sh|cgi)$">
+        Require all denied
+    </FilesMatch>
+    
+    # Autoriser uniquement les images et documents
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx)$">
+        Require all granted
+    </FilesMatch>
+</DirectoryMatch>
