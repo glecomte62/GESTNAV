@@ -57,8 +57,8 @@ try {
 // Gestion des actions POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if (!is_admin()) {
-        http_response_code(403);
-        die('Accès refusé.');
+        header('Location: acces_refuse.php?message=' . urlencode('La modification des membres est réservée aux administrateurs') . '&redirect=membres.php');
+        exit;
     }
     
     $action = $_POST['action'];
@@ -564,7 +564,7 @@ require 'header.php';
                 </form>
                 
                 <?php if (!empty($member['photo_path']) && file_exists($member['photo_path'])): ?>
-                    <a href="crop_photo.php?redirect_to=editer_membre.php%3Fid=<?= $member['id'] ?>" class="action-btn action-crop" style="text-decoration: none;">
+                    <a href="crop_photo.php?id=<?= $member['id'] ?>&redirect_to=editer_membre.php%3Fid=<?= $member['id'] ?>" class="action-btn action-crop" style="text-decoration: none;">
                         🖼️ Recadrer la photo
                     </a>
                 <?php endif; ?>

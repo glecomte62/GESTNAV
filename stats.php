@@ -221,90 +221,418 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
 	exit;
 }
 ?>
+<style>
+@keyframes fadeInUp {
+	from { opacity: 0; transform: translateY(30px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+@keyframes countUp {
+	from { opacity: 0; transform: scale(0.5); }
+	to { opacity: 1; transform: scale(1); }
+}
+@keyframes pulse {
+	0%, 100% { transform: scale(1); }
+	50% { transform: scale(1.05); }
+}
+@keyframes shimmer {
+	0% { background-position: -1000px 0; }
+	100% { background-position: 1000px 0; }
+}
 
-<div class="container py-4">
-	<div class="d-flex align-items-center justify-content-between mb-4">
-		<h1 class="m-0">Statistiques du Club</h1>
-		<div class="d-flex align-items-center gap-3">
-			<form method="get" class="d-flex align-items-center gap-2">
-				<select name="range" class="form-select form-select-sm" onchange="this.form.submit()">
-					<option value="all" <?= $range==='all'?'selected':'' ?>>Tout le temps</option>
-					<option value="last12" <?= $range==='last12'?'selected':'' ?>>12 derniers mois</option>
-					<option value="year" <?= $range==='year'?'selected':'' ?>>Année</option>
-				</select>
-				<select name="y" class="form-select form-select-sm" onchange="this.form.submit()" <?= $range==='year'?'':'disabled' ?> >
-					<?php foreach ($years as $yopt): ?>
-						<option value="<?= (int)$yopt ?>" <?= ($range==='year' && (int)$yopt===$year)?'selected':'' ?>><?= (int)$yopt ?></option>
-					<?php endforeach; ?>
-				</select>
-				<a class="btn btn-sm btn-outline-secondary" href="stats.php?range=<?= urlencode($range) ?>&y=<?= (int)$year ?>&export=csv">
+.stats-hero {
+	background: linear-gradient(135deg, #003a64 0%, #0a548b 50%, #1e6ba8 100%);
+	color: white;
+	padding: 4rem 0;
+	margin: -2rem -2rem 3rem -2rem;
+	position: relative;
+	overflow: hidden;
+}
+.stats-hero::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120"><path d="M0,0 L1200,0 L1200,80 Q900,100 600,80 T0,80 Z" fill="rgba(255,255,255,0.05)"/></svg>') repeat-x bottom;
+	opacity: 0.3;
+}
+.stats-hero h1 {
+	font-size: 3.5rem;
+	font-weight: 800;
+	text-shadow: 0 4px 20px rgba(0,0,0,0.3);
+	margin-bottom: 1rem;
+	animation: fadeInUp 0.8s ease-out;
+}
+.stats-hero p {
+	font-size: 1.3rem;
+	opacity: 0.95;
+	animation: fadeInUp 0.8s ease-out 0.2s backwards;
+}
+
+.stat-card {
+	background: white;
+	border-radius: 20px;
+	padding: 2rem;
+	box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+	border: 1px solid rgba(0,0,0,0.05);
+	transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+	animation: fadeInUp 0.6s ease-out backwards;
+	position: relative;
+	overflow: hidden;
+}
+.stat-card::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+	transition: left 0.5s;
+}
+.stat-card:hover::before {
+	left: 100%;
+}
+.stat-card:hover {
+	transform: translateY(-10px);
+	box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.stat-icon {
+	width: 70px;
+	height: 70px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 2rem;
+	margin-bottom: 1.5rem;
+	transition: transform 0.3s;
+}
+.stat-card:hover .stat-icon {
+	transform: scale(1.1) rotate(5deg);
+	animation: pulse 1s infinite;
+}
+.stat-value {
+	font-size: 3.5rem;
+	font-weight: 800;
+	line-height: 1;
+	margin-bottom: 0.5rem;
+	background: linear-gradient(135deg, #003a64, #1e6ba8);
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-clip: text;
+	animation: countUp 0.8s ease-out backwards;
+}
+.stat-label {
+	font-size: 0.95rem;
+	color: #666;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	font-weight: 600;
+}
+
+.podium-container {
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	gap: 2rem;
+	padding: 3rem 1rem 1rem;
+	position: relative;
+}
+.podium-item {
+	text-align: center;
+	animation: fadeInUp 0.8s ease-out backwards;
+	position: relative;
+}
+.podium-item:nth-child(1) { animation-delay: 0.4s; }
+.podium-item:nth-child(2) { animation-delay: 0.2s; }
+.podium-item:nth-child(3) { animation-delay: 0.6s; }
+.podium-avatar {
+	width: 100px;
+	height: 100px;
+	border-radius: 50%;
+	margin: 0 auto 1rem;
+	border: 5px solid;
+	box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+	overflow: hidden;
+	background: #f0f0f0;
+	position: relative;
+	transition: transform 0.3s;
+}
+.podium-item:hover .podium-avatar {
+	transform: scale(1.1);
+}
+.podium-avatar img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+.podium-base {
+	border-radius: 10px 10px 0 0;
+	padding: 1.5rem 2rem;
+	font-weight: 700;
+	color: white;
+	position: relative;
+	min-width: 140px;
+	transition: transform 0.3s;
+}
+.podium-item:hover .podium-base {
+	transform: translateY(-5px);
+}
+.podium-rank {
+	position: absolute;
+	top: -20px;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.3rem;
+	font-weight: 800;
+	box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.podium-1 .podium-avatar { border-color: #FFD700; }
+.podium-1 .podium-base { background: linear-gradient(135deg, #FFD700, #FFA500); height: 180px; }
+.podium-1 .podium-rank { background: #FFD700; color: #333; }
+.podium-2 .podium-avatar { border-color: #C0C0C0; }
+.podium-2 .podium-base { background: linear-gradient(135deg, #C0C0C0, #999); height: 140px; }
+.podium-2 .podium-rank { background: #C0C0C0; color: #333; }
+.podium-3 .podium-avatar { border-color: #CD7F32; }
+.podium-3 .podium-base { background: linear-gradient(135deg, #CD7F32, #8B4513); height: 100px; }
+.podium-3 .podium-rank { background: #CD7F32; color: white; }
+
+.chart-card {
+	background: white;
+	border-radius: 20px;
+	padding: 2rem;
+	box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+	margin-bottom: 2rem;
+	animation: fadeInUp 0.6s ease-out backwards;
+}
+.ranking-item {
+	display: flex;
+	align-items: center;
+	padding: 1rem;
+	border-radius: 12px;
+	margin-bottom: 0.75rem;
+	background: linear-gradient(90deg, rgba(0,58,100,0.03), transparent);
+	transition: all 0.3s;
+	animation: fadeInUp 0.4s ease-out backwards;
+}
+.ranking-item:hover {
+	background: linear-gradient(90deg, rgba(0,58,100,0.08), transparent);
+	transform: translateX(10px);
+}
+.ranking-number {
+	width: 50px;
+	height: 50px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 1.3rem;
+	font-weight: 800;
+	margin-right: 1.5rem;
+	flex-shrink: 0;
+}
+.ranking-number.gold { background: linear-gradient(135deg, #FFD700, #FFA500); color: #333; }
+.ranking-number.silver { background: linear-gradient(135deg, #C0C0C0, #999); color: #333; }
+.ranking-number.bronze { background: linear-gradient(135deg, #CD7F32, #8B4513); color: white; }
+.ranking-number.other { background: #e0e0e0; color: #666; }
+.ranking-bar {
+	height: 12px;
+	background: linear-gradient(90deg, #003a64, #1e6ba8);
+	border-radius: 6px;
+	transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+	box-shadow: 0 2px 8px rgba(0,58,100,0.3);
+}
+
+.filter-card {
+	background: white;
+	border-radius: 15px;
+	padding: 1.5rem;
+	box-shadow: 0 5px 20px rgba(0,0,0,0.06);
+	margin-bottom: 2rem;
+}
+</style>
+
+<div class="stats-hero">
+	<div class="container position-relative">
+		<div class="text-center">
+			<h1><i class="bi bi-graph-up-arrow"></i> Statistiques du Club</h1>
+			<p>Analyse détaillée de l'activité et des performances</p>
+			<?php if (isset($_SESSION['user_id'])): ?>
+				<div class="mt-3">
+					<a href="mes_stats.php" class="btn btn-light btn-lg">
+						<i class="bi bi-person-badge"></i> Mes Statistiques Personnelles
+					</a>
+				</div>
+			<?php endif; ?>
+		</div>
+	</div>
+</div>
+
+<div class="container">
+	<div class="filter-card">
+		<div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+			<form method="get" class="d-flex align-items-center gap-3 flex-wrap">
+				<div>
+					<label class="form-label mb-1 small fw-bold text-uppercase">Période</label>
+					<select name="range" class="form-select" onchange="this.form.submit()">
+						<option value="all" <?= $range==='all'?'selected':'' ?>>🌍 Tout le temps</option>
+						<option value="last12" <?= $range==='last12'?'selected':'' ?>>📅 12 derniers mois</option>
+						<option value="year" <?= $range==='year'?'selected':'' ?>>📆 Année spécifique</option>
+					</select>
+				</div>
+				<div>
+					<label class="form-label mb-1 small fw-bold text-uppercase">Année</label>
+					<select name="y" class="form-select" onchange="this.form.submit()" <?= $range==='year'?'':'disabled' ?>>
+						<?php foreach ($years as $yopt): ?>
+							<option value="<?= (int)$yopt ?>" <?= ($range==='year' && (int)$yopt===$year)?'selected':'' ?>><?= (int)$yopt ?></option>
+						<?php endforeach; ?>
+					</select>
+				</div>
+			</form>
+			<div class="d-flex gap-2">
+				<a class="btn btn-outline-primary" href="stats.php?range=<?= urlencode($range) ?>&y=<?= (int)$year ?>&export=csv">
 					<i class="bi bi-download"></i> Export CSV
 				</a>
-			</form>
-			<span class="text-muted small">Généré le <?= date('d/m/Y \à H:i') ?></span>
-		</div>
-	</div>
-
-	<div class="row g-3 mb-4">
-		<div class="col-md-3">
-			<div class="gn-card h-100">
-				<div class="gn-card-header"><h3 class="gn-card-title">Événements</h3></div>
-				<div class="p-3">
-					<div class="display-5 fw-bold mb-1"><?= $nb_evenements ?></div>
-					<small class="text-muted">créés</small>
-				</div>
-			</div>
-		</div>
-		<div class="col-md-3">
-			<div class="gn-card h-100">
-				<div class="gn-card-header"><h3 class="gn-card-title">Participations (événements)</h3></div>
-				<div class="p-3">
-					<div class="display-5 fw-bold mb-1"><?= $participants_evenements ?></div>
-					<small class="text-muted">personnes confirmées</small>
-				</div>
-			</div>
-		</div>
-		<div class="col-md-3">
-			<div class="gn-card h-100">
-				<div class="gn-card-header"><h3 class="gn-card-title">Sorties</h3></div>
-				<div class="p-3">
-					<div class="display-5 fw-bold mb-1"><?= $nb_sorties ?></div>
-					<small class="text-muted">créées</small>
-				</div>
-			</div>
-		</div>
-		<div class="col-md-3">
-			<div class="gn-card h-100">
-				<div class="gn-card-header"><h3 class="gn-card-title">Participations (sorties)</h3></div>
-				<div class="p-3">
-					<div class="display-5 fw-bold mb-1"><?= $participants_sorties ?></div>
-					<small class="text-muted">inscriptions</small>
-				</div>
 			</div>
 		</div>
 	</div>
 
-	<?php if ($hasDestinationId): ?>
-	<div class="gn-card mb-4">
-		<div class="gn-card-header d-flex justify-content-between align-items-center">
-			<h3 class="gn-card-title mb-0">Top 10 – Destinations des sorties</h3>
-			<small class="text-muted">Basé sur le champ destination</small>
-		</div>
-		<div class="p-3">
-			<?php if (empty($top_destinations)): ?>
-				<div class="text-muted">Aucune donnée.</div>
-			<?php else: foreach ($top_destinations as $i => $d): ?>
-				<div class="mb-3">
-					<div class="d-flex justify-content-between">
-						<strong><?= $i+1 ?>. <?= htmlspecialchars(($d['oaci']?($d['oaci'].' – '):'').$d['nom']) ?></strong>
-						<span><?= (int)$d['nb'] ?></span>
-					</div>
-					<div class="progress" style="height: 10px;">
-						<?php $sum = array_sum(array_map(fn($x)=> (int)$x['nb'], $top_destinations)); $pct = $sum>0 ? round(((int)$d['nb'])/max(1,$sum)*100) : 0; ?>
-						<div class="progress-bar bg-primary" role="progressbar" style="width: <?= $pct ?>%"></div>
-					</div>
+	<div class="row g-4 mb-5" style="animation-delay: 0.2s">
+		<div class="col-md-6 col-lg-3" style="animation-delay: 0.2s">
+			<div class="stat-card">
+				<div class="stat-icon" style="background: linear-gradient(135deg, #FF6B6B, #FF8E8E); color: white;">
+					<i class="bi bi-calendar-event"></i>
 				</div>
-			<?php endforeach; endif; ?>
+				<div class="stat-value"><?= $nb_evenements ?></div>
+				<div class="stat-label">Événements créés</div>
+			</div>
+		</div>
+		<div class="col-md-6 col-lg-3" style="animation-delay: 0.3s">
+			<div class="stat-card">
+				<div class="stat-icon" style="background: linear-gradient(135deg, #4ECDC4, #44A08D); color: white;">
+					<i class="bi bi-people-fill"></i>
+				</div>
+				<div class="stat-value"><?= $participants_evenements ?></div>
+				<div class="stat-label">Participations événements</div>
+			</div>
+		</div>
+		<div class="col-md-6 col-lg-3" style="animation-delay: 0.4s">
+			<div class="stat-card">
+				<div class="stat-icon" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+					<i class="bi bi-airplane-fill"></i>
+				</div>
+				<div class="stat-value"><?= $nb_sorties ?></div>
+				<div class="stat-label">Sorties créées</div>
+			</div>
+		</div>
+		<div class="col-md-6 col-lg-3" style="animation-delay: 0.5s">
+			<div class="stat-card">
+				<div class="stat-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white;">
+					<i class="bi bi-person-check-fill"></i>
+				</div>
+				<div class="stat-value"><?= $participants_sorties ?></div>
+				<div class="stat-label">Inscriptions sorties</div>
+			</div>
+		</div>
+	</div>
+
+	<?php if ($hasDestinationId && !empty($top_destinations)): ?>
+	<div class="chart-card" style="animation-delay: 0.6s">
+		<div class="d-flex justify-content-between align-items-center mb-4">
+			<h2 class="h3 mb-0"><i class="bi bi-geo-alt-fill text-danger"></i> Top 10 Destinations</h2>
+			<span class="badge bg-primary">Sorties</span>
+		</div>
+		<div class="row g-3">
+			<?php foreach ($top_destinations as $i => $d): 
+				$maxDest = max(array_column($top_destinations, 'nb'));
+				$pct = $maxDest > 0 ? ($d['nb'] / $maxDest * 100) : 0;
+			?>
+			<div class="col-12" style="animation-delay: <?= 0.7 + ($i * 0.1) ?>s">
+				<a href="sorties.php?destination_id=<?= (int)$d['id'] ?>" class="text-decoration-none">
+					<div class="ranking-item">
+						<div class="ranking-number <?= $i==0 ? 'gold' : ($i==1 ? 'silver' : ($i==2 ? 'bronze' : 'other')) ?>">
+							<?= $i+1 ?>
+						</div>
+						<div class="flex-grow-1">
+							<div class="d-flex justify-content-between mb-2">
+								<strong style="font-size: 1.1rem; color: #212529;"><?= htmlspecialchars(($d['oaci'] ? $d['oaci'].' – ' : '').$d['nom']) ?></strong>
+								<span class="badge" style="background: linear-gradient(135deg, #003a64, #1e6ba8); font-size: 1rem;"><?= (int)$d['nb'] ?> sorties</span>
+							</div>
+							<div class="progress" style="height: 12px; background: #e9ecef;">
+								<div class="ranking-bar" style="width: <?= $pct ?>%"></div>
+							</div>
+						</div>
+					</div>
+				</a>
+			</div>
+			<?php endforeach; ?>
+		</div>
+	</div>
+	<?php endif; ?>
+
+	<?php if (!empty($top_global) && count($top_global) >= 3): ?>
+	<div class="chart-card" style="animation-delay: 0.7s">
+		<h2 class="h3 text-center mb-4"><i class="bi bi-trophy-fill text-warning"></i> Podium Général</h2>
+		<div class="podium-container">
+			<a href="editer_membre.php?id=<?= $top_global[1]['id'] ?>" class="podium-item podium-2 text-decoration-none" style="color: white;">
+				<div class="podium-avatar">
+					<?php 
+					$u2 = $top_global[1];
+					$photoU2 = $pdo->prepare('SELECT photo_path FROM users WHERE id = ?');
+					$photoU2->execute([$u2['id']]);
+					$photoPath2 = $photoU2->fetchColumn() ?: '/assets/img/avatar-placeholder.svg';
+					?>
+					<img src="<?= htmlspecialchars($photoPath2) ?>" alt="<?= htmlspecialchars($u2['prenom'].' '.$u2['nom']) ?>">
+				</div>
+				<div class="podium-base">
+					<div class="podium-rank">2</div>
+					<div style="margin-top: 1rem; font-size: 0.95rem;"><?= htmlspecialchars($u2['prenom']) ?></div>
+					<div style="font-size: 0.85rem; opacity: 0.9;"><?= htmlspecialchars($u2['nom']) ?></div>
+					<div style="font-size: 1.8rem; margin-top: 0.5rem;"><?= $u2['total'] ?></div>
+				</div>
+			</a>
+			<a href="editer_membre.php?id=<?= $top_global[0]['id'] ?>" class="podium-item podium-1 text-decoration-none" style="color: white;">
+				<div class="podium-avatar">
+					<?php 
+					$u1 = $top_global[0];
+					$photoU1 = $pdo->prepare('SELECT photo_path FROM users WHERE id = ?');
+					$photoU1->execute([$u1['id']]);
+					$photoPath1 = $photoU1->fetchColumn() ?: '/assets/img/avatar-placeholder.svg';
+					?>
+					<img src="<?= htmlspecialchars($photoPath1) ?>" alt="<?= htmlspecialchars($u1['prenom'].' '.$u1['nom']) ?>">
+				</div>
+				<div class="podium-base">
+					<div class="podium-rank">🏆</div>
+					<div style="margin-top: 1rem; font-size: 1.1rem;"><?= htmlspecialchars($u1['prenom']) ?></div>
+					<div style="font-size: 0.95rem; opacity: 0.9;"><?= htmlspecialchars($u1['nom']) ?></div>
+					<div style="font-size: 2.2rem; margin-top: 0.5rem;"><?= $u1['total'] ?></div>
+				</div>
+			</a>
+			<a href="editer_membre.php?id=<?= $top_global[2]['id'] ?>" class="podium-item podium-3 text-decoration-none" style="color: white;">
+				<div class="podium-avatar">
+					<?php 
+					$u3 = $top_global[2];
+					$photoU3 = $pdo->prepare('SELECT photo_path FROM users WHERE id = ?');
+					$photoU3->execute([$u3['id']]);
+					$photoPath3 = $photoU3->fetchColumn() ?: '/assets/img/avatar-placeholder.svg';
+					?>
+					<img src="<?= htmlspecialchars($photoPath3) ?>" alt="<?= htmlspecialchars($u3['prenom'].' '.$u3['nom']) ?>">
+				</div>
+				<div class="podium-base">
+					<div class="podium-rank">3</div>
+					<div style="margin-top: 1rem; font-size: 0.9rem;"><?= htmlspecialchars($u3['prenom']) ?></div>
+					<div style="font-size: 0.8rem; opacity: 0.9;"><?= htmlspecialchars($u3['nom']) ?></div>
+					<div style="font-size: 1.6rem; margin-top: 0.5rem;"><?= $u3['total'] ?></div>
+				</div>
+			</a>
 		</div>
 	</div>
 	<?php endif; ?>
@@ -364,20 +692,21 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
 		</div>
 	</div>
 
-	<div class="gn-card mb-4">
-		<div class="gn-card-header">
-			<h3 class="gn-card-title">Top 10 – Classement général</h3>
+	<div class="chart-card" style="animation-delay: 1.1s">
+		<div class="d-flex justify-content-between align-items-center mb-4">
+			<h2 class="h3 mb-0"><i class="bi bi-bar-chart-fill text-primary"></i> Classement Général</h2>
+			<span class="badge bg-primary">Top 10</span>
 		</div>
-		<div class="p-0">
+		<div>
 			<div class="table-responsive">
 				<table class="table table-hover mb-0 align-middle">
-					<thead class="table-light">
+					<thead style="background: linear-gradient(135deg, #003a64, #0a548b); color: white;">
 						<tr>
-							<th>#</th>
-							<th>Nom</th>
-							<th>Sorties</th>
-							<th>Événements</th>
-							<th>Total</th>
+							<th style="border:none; padding: 1rem;">#</th>
+							<th style="border:none; padding: 1rem;">Membre</th>
+							<th style="border:none; padding: 1rem;">Sorties</th>
+							<th style="border:none; padding: 1rem;">Événements</th>
+							<th style="border:none; padding: 1rem;">Total</th>
 						</tr>
 					</thead>
 					<tbody>

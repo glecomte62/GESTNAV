@@ -25,8 +25,8 @@ if (!$hasTypeMembre) {
 // Gestion des actions POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if (!is_admin()) {
-        http_response_code(403);
-        die('Accès refusé.');
+        header('Location: acces_refuse.php?message=' . urlencode('La gestion des membres est réservée aux administrateurs') . '&redirect=membres.php');
+        exit;
     }
     
     $action = $_POST['action'];

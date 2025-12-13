@@ -3,8 +3,7 @@ require_once 'config.php';
 require_once 'auth.php';
 require_login();
 if (!is_admin()) {
-    http_response_code(403);
-    echo "Accès refusé.";
+    header('Location: acces_refuse.php?message=' . urlencode('La consultation des logs est réservée aux administrateurs') . '&redirect=index.php');
     exit;
 }
 

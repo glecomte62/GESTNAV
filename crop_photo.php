@@ -3,14 +3,27 @@ require_once 'config.php';
 require_once 'auth.php';
 require_login();
 
-$user_id = $_SESSION['user_id'] ?? null;
-if (!$user_id) { header('Location: login.php'); exit; }
+// Empêcher tout cache
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
+// Si un ID est passé en paramètre (admin édite un membre), l'utiliser
+// Sinon utiliser l'ID de la session (utilisateur édite son propre profil)
+$target_user_id = isset($_GET['id']) ? (int)$_GET['id'] : ($_SESSION['user_id'] ?? null);
+if (!$target_user_id) { header('Location: login.php'); exit; }
+
+// Vérifier les droits : soit c'est son propre profil, soit il est admin
+if ($target_user_id != $_SESSION['user_id'] && !is_admin()) {
+    header('Location: acces_refuse.php?message=' . urlencode('Vous ne pouvez modifier que votre propre photo') . '&redirect=account.php');
+    exit;
+}
 
 $stmt = $pdo->prepare('SELECT photo_path, photo_metadata FROM users WHERE id = ?');
-$stmt->execute([$user_id]);
-$user = $stmt->fetch(PDO::FETCH_ASSOC);
+$stmt->execute([$target_user_id]);
+$target_user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if (!$user || empty($user['photo_path'])) {
+if (!$target_user || empty($target_user['photo_path'])) {
     header('Location: account.php');
     exit;
 }
@@ -18,19 +31,28 @@ if (!$user || empty($user['photo_path'])) {
 // Récupérer les offsets existants
 $offsetX = 0;
 $offsetY = 0;
-if (!empty($user['photo_metadata'])) {
-    $meta = json_decode($user['photo_metadata'], true);
+if (!empty($target_user['photo_metadata'])) {
+    $meta = json_decode($target_user['photo_metadata'], true);
     $offsetX = $meta['offsetX'] ?? 0;
     $offsetY = $meta['offsetY'] ?? 0;
 }
 
 // Gestion POST pour sauvegarder le recadrage
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Récupérer l'ID depuis le POST (priorité) ou la session
+    $save_user_id = isset($_POST['id']) ? (int)$_POST['id'] : ($_SESSION['user_id'] ?? null);
+    
+    // Vérifier les droits
+    if ($save_user_id != $_SESSION['user_id'] && !is_admin()) {
+        header('Location: acces_refuse.php?message=' . urlencode('Vous ne pouvez modifier que votre propre photo') . '&redirect=account.php');
+        exit;
+    }
+    
     $offsetX = (int)($_POST['offsetX'] ?? 0);
     $offsetY = (int)($_POST['offsetY'] ?? 0);
     
     $metadata = json_encode(['offsetX' => $offsetX, 'offsetY' => $offsetY]);
-    $pdo->prepare('UPDATE users SET photo_metadata = ? WHERE id = ?')->execute([$metadata, $user_id]);
+    $pdo->prepare('UPDATE users SET photo_metadata = ? WHERE id = ?')->execute([$metadata, $save_user_id]);
     
     // Redirection avec paramètre optionnel
     $redirectTo = isset($_POST['redirect_to']) ? $_POST['redirect_to'] : 'account.php';
@@ -225,12 +247,13 @@ require 'header.php';
     </div>
 
     <div class="crop-canvas" id="cropCanvas">
-        <img id="photoImg" src="<?= htmlspecialchars($user['photo_path']) ?>" alt="Photo à recadrer">
+        <img id="photoImg" src="<?= htmlspecialchars($target_user['photo_path']) ?>?nocache=<?= microtime(true) ?>" alt="Photo à recadrer">
     </div>
     <div class="crop-hint">Glissez la photo pour l'ajuster</div>
 
     <div class="controls-section">
         <form method="post" id="cropForm">
+            <input type="hidden" name="id" value="<?= $target_user_id ?>">
             <input type="hidden" name="redirect_to" value="<?= htmlspecialchars($_GET['redirect_to'] ?? 'account.php') ?>">
             
             <div class="control-group">
