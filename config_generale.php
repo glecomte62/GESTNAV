@@ -2,242 +2,132 @@
 /**
  * Configuration générale du club
  * Page d'administration pour modifier les paramètres du club
+ * Les paramètres sont stockés en base de données
  */
 
 require_once 'config.php';
 require_once 'auth.php';
+require_once 'utils/club_config_manager.php';
 
 require_login();
 require_admin();
 
-// Charger la configuration actuelle depuis club_config.php
-$configFile = __DIR__ . '/club_config.php';
-$configContent = file_get_contents($configFile);
-
 // Handler pour sauvegarder les modifications
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     try {
-        // Récupérer les valeurs du formulaire
-        $clubName = $_POST['club_name'] ?? '';
-        $clubShortName = $_POST['club_short_name'] ?? '';
-        $clubCity = $_POST['club_city'] ?? '';
-        $clubDepartment = $_POST['club_department'] ?? '';
-        $clubRegion = $_POST['club_region'] ?? '';
-        $clubHomeBase = $_POST['club_home_base'] ?? '';
+        // Préparer les paramètres à sauvegarder
+        $settings = [
+            // Informations du club
+            'club_name' => $_POST['club_name'] ?? '',
+            'club_short_name' => $_POST['club_short_name'] ?? '',
+            'club_city' => $_POST['club_city'] ?? '',
+            'club_department' => $_POST['club_department'] ?? '',
+            'club_region' => $_POST['club_region'] ?? '',
+            'club_home_base' => $_POST['club_home_base'] ?? '',
+            
+            // Contact
+            'club_email_from' => $_POST['club_email'] ?? '',
+            'club_email_reply_to' => $_POST['club_email'] ?? '',
+            'club_phone' => $_POST['club_phone'] ?? '',
+            'club_website' => $_POST['club_website'] ?? '',
+            'club_facebook' => $_POST['club_facebook'] ?? '',
+            
+            // Adresse
+            'club_address_line1' => $_POST['club_address_1'] ?? '',
+            'club_address_line2' => $_POST['club_address_2'] ?? '',
+            'club_address_postal' => $_POST['club_postal'] ?? '',
+            
+            // Branding
+            'club_logo_path' => $_POST['logo_path'] ?? 'assets/img/logo.png',
+            'club_logo_alt' => 'Logo ' . ($_POST['club_name'] ?? 'Club'),
+            'club_logo_height' => (int)($_POST['logo_height'] ?? 50),
+            'club_cover_image' => 'assets/img/cover.jpg',
+            'club_color_primary' => $_POST['color_primary'] ?? '#004b8d',
+            'club_color_secondary' => $_POST['color_secondary'] ?? '#00a0c6',
+            'club_color_accent' => $_POST['color_accent'] ?? '#0078b8',
+            
+            // Règles de gestion
+            'sorties_per_month' => (int)($_POST['sorties_per_month'] ?? 2),
+            'inscription_min_days' => (int)($_POST['inscription_min_days'] ?? 3),
+            'notification_days_before' => (int)($_POST['notification_days'] ?? 7),
+            'priority_double_inscription' => isset($_POST['priority_double']),
+            
+            // Intégrations
+            'weather_api_key' => $_POST['weather_api_key'] ?? '',
+            'weather_api_provider' => 'openweathermap',
+            'map_default_center_lat' => (float)($_POST['map_lat'] ?? 46.603354),
+            'map_default_center_lng' => (float)($_POST['map_lng'] ?? 1.888334),
+            'map_default_zoom' => (int)($_POST['map_zoom'] ?? 6),
+            
+            // Modules
+            'module_events' => isset($_POST['module_events']),
+            'module_polls' => isset($_POST['module_polls']),
+            'module_proposals' => isset($_POST['module_proposals']),
+            'module_changelog' => isset($_POST['module_changelog']),
+            'module_stats' => isset($_POST['module_stats']),
+            'module_basulm_import' => isset($_POST['module_basulm']),
+            'module_weather' => isset($_POST['module_weather']),
+            
+            // Upload sizes
+            'max_photo_size' => 5 * 1024 * 1024,
+            'max_attachment_size' => 10 * 1024 * 1024,
+            'max_event_cover_size' => 3 * 1024 * 1024,
+        ];
         
-        $clubEmail = $_POST['club_email'] ?? '';
-        $clubPhone = $_POST['club_phone'] ?? '';
-        $clubWebsite = $_POST['club_website'] ?? '';
-        $clubFacebook = $_POST['club_facebook'] ?? '';
-        
-        $clubAddress1 = $_POST['club_address_1'] ?? '';
-        $clubAddress2 = $_POST['club_address_2'] ?? '';
-        $clubPostal = $_POST['club_postal'] ?? '';
-        
-        $logoPath = $_POST['logo_path'] ?? 'assets/img/logo.png';
-        $logoHeight = (int)($_POST['logo_height'] ?? 50);
-        
-        $colorPrimary = $_POST['color_primary'] ?? '#004b8d';
-        $colorSecondary = $_POST['color_secondary'] ?? '#00a0c6';
-        $colorAccent = $_POST['color_accent'] ?? '#0078b8';
-        
-        $sortiesPerMonth = (int)($_POST['sorties_per_month'] ?? 2);
-        $inscriptionMinDays = (int)($_POST['inscription_min_days'] ?? 3);
-        $notificationDays = (int)($_POST['notification_days'] ?? 7);
-        $priorityDouble = isset($_POST['priority_double']) ? 'true' : 'false';
-        
-        $weatherApiKey = $_POST['weather_api_key'] ?? '';
-        $mapLat = (float)($_POST['map_lat'] ?? 50.9634);
-        $mapLng = (float)($_POST['map_lng'] ?? 1.9547);
-        $mapZoom = (int)($_POST['map_zoom'] ?? 8);
-        
-        // Modules
-        $moduleEvents = isset($_POST['module_events']) ? 'true' : 'false';
-        $modulePolls = isset($_POST['module_polls']) ? 'true' : 'false';
-        $moduleProposals = isset($_POST['module_proposals']) ? 'true' : 'false';
-        $moduleChangelog = isset($_POST['module_changelog']) ? 'true' : 'false';
-        $moduleStats = isset($_POST['module_stats']) ? 'true' : 'false';
-        $moduleBasulm = isset($_POST['module_basulm']) ? 'true' : 'false';
-        $moduleWeather = isset($_POST['module_weather']) ? 'true' : 'false';
-        
-        // Générer le nouveau contenu du fichier
-        $newConfig = "<?php
-/**
- * GESTNAV - Configuration personnalisable par club
- * Dernière modification : " . date('d/m/Y à H:i') . " par " . htmlspecialchars($_SESSION['user_prenom'] . ' ' . $_SESSION['user_nom']) . "
- */
-
-// ============================================================================
-// INFORMATIONS DU CLUB
-// ============================================================================
-
-define('CLUB_NAME', '" . addslashes($clubName) . "');
-define('CLUB_SHORT_NAME', '" . addslashes($clubShortName) . "');
-define('CLUB_CITY', '" . addslashes($clubCity) . "');
-define('CLUB_DEPARTMENT', '" . addslashes($clubDepartment) . "');
-define('CLUB_REGION', '" . addslashes($clubRegion) . "');
-define('CLUB_HOME_BASE', '" . addslashes($clubHomeBase) . "');
-
-// ============================================================================
-// CONTACT ET COMMUNICATION
-// ============================================================================
-
-define('CLUB_EMAIL_FROM', '" . addslashes($clubEmail) . "');
-define('CLUB_EMAIL_REPLY_TO', '" . addslashes($clubEmail) . "');
-define('CLUB_EMAIL_SENDER_NAME', '" . addslashes(strtoupper($clubShortName)) . "');
-define('CLUB_PHONE', '" . addslashes($clubPhone) . "');
-define('CLUB_WEBSITE', '" . addslashes($clubWebsite) . "');
-define('CLUB_FACEBOOK', '" . addslashes($clubFacebook) . "');
-
-define('CLUB_ADDRESS_LINE1', '" . addslashes($clubAddress1) . "');
-define('CLUB_ADDRESS_LINE2', '" . addslashes($clubAddress2) . "');
-define('CLUB_ADDRESS_POSTAL', '" . addslashes($clubPostal) . "');
-
-// ============================================================================
-// VISUELS ET BRANDING
-// ============================================================================
-
-define('CLUB_LOGO_PATH', '" . addslashes($logoPath) . "');
-define('CLUB_LOGO_ALT', 'Logo " . addslashes($clubName) . "');
-define('CLUB_LOGO_HEIGHT', " . $logoHeight . ");
-define('CLUB_COVER_IMAGE', 'assets/img/cover.jpg');
-
-define('CLUB_COLOR_PRIMARY', '" . addslashes($colorPrimary) . "');
-define('CLUB_COLOR_SECONDARY', '" . addslashes($colorSecondary) . "');
-define('CLUB_COLOR_ACCENT', '" . addslashes($colorAccent) . "');
-
-// ============================================================================
-// MODULES OPTIONNELS
-// ============================================================================
-
-define('CLUB_MODULE_EVENTS', " . $moduleEvents . ");
-define('CLUB_MODULE_POLLS', " . $modulePolls . ");
-define('CLUB_MODULE_PROPOSALS', " . $moduleProposals . ");
-define('CLUB_MODULE_CHANGELOG', " . $moduleChangelog . ");
-define('CLUB_MODULE_STATS', " . $moduleStats . ");
-define('CLUB_MODULE_BASULM_IMPORT', " . $moduleBasulm . ");
-define('CLUB_MODULE_WEATHER', " . $moduleWeather . ");
-
-// ============================================================================
-// RÈGLES DE GESTION
-// ============================================================================
-
-define('CLUB_SORTIES_PER_MONTH', " . $sortiesPerMonth . ");
-define('CLUB_INSCRIPTION_MIN_DAYS', " . $inscriptionMinDays . ");
-define('CLUB_NOTIFICATION_DAYS_BEFORE', " . $notificationDays . ");
-define('CLUB_PRIORITY_DOUBLE_INSCRIPTION', " . $priorityDouble . ");
-
-// ============================================================================
-// UPLOADS ET FICHIERS
-// ============================================================================
-
-define('CLUB_MAX_PHOTO_SIZE', 5 * 1024 * 1024);
-define('CLUB_MAX_ATTACHMENT_SIZE', 10 * 1024 * 1024);
-define('CLUB_MAX_EVENT_COVER_SIZE', 3 * 1024 * 1024);
-
-define('CLUB_ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
-define('CLUB_ALLOWED_DOCUMENT_TYPES', ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
-
-// ============================================================================
-// INTÉGRATIONS EXTERNES
-// ============================================================================
-
-define('CLUB_WEATHER_API_KEY', '" . addslashes($weatherApiKey) . "');
-define('CLUB_WEATHER_API_PROVIDER', 'openweathermap');
-
-define('CLUB_MAP_DEFAULT_CENTER_LAT', " . $mapLat . ");
-define('CLUB_MAP_DEFAULT_CENTER_LNG', " . $mapLng . ");
-define('CLUB_MAP_DEFAULT_ZOOM', " . $mapZoom . ");
-
-// ============================================================================
-// FONCTIONS HELPER
-// ============================================================================
-
-function get_club_config() {
-    return [
-        'name' => CLUB_NAME,
-        'short_name' => CLUB_SHORT_NAME,
-        'city' => CLUB_CITY,
-        'email' => CLUB_EMAIL_FROM,
-        'website' => CLUB_WEBSITE,
-        'colors' => [
-            'primary' => CLUB_COLOR_PRIMARY,
-            'secondary' => CLUB_COLOR_SECONDARY,
-            'accent' => CLUB_COLOR_ACCENT
-        ]
-    ];
-}
-
-function is_module_enabled(\$module_name) {
-    \$const_name = 'CLUB_MODULE_' . strtoupper(\$module_name);
-    return defined(\$const_name) && constant(\$const_name) === true;
-}
-";
-        
-        // Sauvegarder le fichier
-        if (file_put_contents($configFile, $newConfig)) {
+        // Sauvegarder en base de données
+        if (update_club_settings($settings, $_SESSION['user_id'])) {
             // Logger l'opération
             $stmt = $pdo->prepare("INSERT INTO operation_logs (user_id, action, details) VALUES (?, 'config_update', ?)");
             $stmt->execute([
                 $_SESSION['user_id'],
-                'Modification de la configuration du club'
+                'Modification de la configuration du club via interface web'
             ]);
             
-            $success = "Configuration sauvegardée avec succès !";
-            // Recharger le contenu
-            $configContent = $newConfig;
+            $success = "Configuration sauvegardée avec succès dans la base de données !";
         } else {
-            $error = "Erreur lors de la sauvegarde du fichier de configuration.";
+            $error = "Erreur lors de la sauvegarde de la configuration.";
         }
+        
     } catch (Exception $e) {
         $error = "Erreur : " . $e->getMessage();
     }
 }
 
-// Extraire les valeurs actuelles depuis le fichier
-function extractConfigValue($content, $constName, $default = '') {
-    if (preg_match("/define\('$constName',\s*'([^']*)'\);/", $content, $matches)) {
-        return stripslashes($matches[1]);
-    } elseif (preg_match("/define\('$constName',\s*([^)]+)\);/", $content, $matches)) {
-        return trim($matches[1]);
-    }
-    return $default;
-}
-
+// Charger la configuration actuelle depuis la base de données
 $currentConfig = [
-    'club_name' => extractConfigValue($configContent, 'CLUB_NAME'),
-    'club_short_name' => extractConfigValue($configContent, 'CLUB_SHORT_NAME'),
-    'club_city' => extractConfigValue($configContent, 'CLUB_CITY'),
-    'club_department' => extractConfigValue($configContent, 'CLUB_DEPARTMENT'),
-    'club_region' => extractConfigValue($configContent, 'CLUB_REGION'),
-    'club_home_base' => extractConfigValue($configContent, 'CLUB_HOME_BASE'),
-    'club_email' => extractConfigValue($configContent, 'CLUB_EMAIL_FROM'),
-    'club_phone' => extractConfigValue($configContent, 'CLUB_PHONE'),
-    'club_website' => extractConfigValue($configContent, 'CLUB_WEBSITE'),
-    'club_facebook' => extractConfigValue($configContent, 'CLUB_FACEBOOK'),
-    'club_address_1' => extractConfigValue($configContent, 'CLUB_ADDRESS_LINE1'),
-    'club_address_2' => extractConfigValue($configContent, 'CLUB_ADDRESS_LINE2'),
-    'club_postal' => extractConfigValue($configContent, 'CLUB_ADDRESS_POSTAL'),
-    'logo_path' => extractConfigValue($configContent, 'CLUB_LOGO_PATH', 'assets/img/logo.png'),
-    'logo_height' => extractConfigValue($configContent, 'CLUB_LOGO_HEIGHT', '50'),
-    'color_primary' => extractConfigValue($configContent, 'CLUB_COLOR_PRIMARY', '#004b8d'),
-    'color_secondary' => extractConfigValue($configContent, 'CLUB_COLOR_SECONDARY', '#00a0c6'),
-    'color_accent' => extractConfigValue($configContent, 'CLUB_COLOR_ACCENT', '#0078b8'),
-    'sorties_per_month' => extractConfigValue($configContent, 'CLUB_SORTIES_PER_MONTH', '2'),
-    'inscription_min_days' => extractConfigValue($configContent, 'CLUB_INSCRIPTION_MIN_DAYS', '3'),
-    'notification_days' => extractConfigValue($configContent, 'CLUB_NOTIFICATION_DAYS_BEFORE', '7'),
-    'priority_double' => extractConfigValue($configContent, 'CLUB_PRIORITY_DOUBLE_INSCRIPTION', 'true') === 'true',
-    'weather_api_key' => extractConfigValue($configContent, 'CLUB_WEATHER_API_KEY'),
-    'map_lat' => extractConfigValue($configContent, 'CLUB_MAP_DEFAULT_CENTER_LAT', '50.9634'),
-    'map_lng' => extractConfigValue($configContent, 'CLUB_MAP_DEFAULT_CENTER_LNG', '1.9547'),
-    'map_zoom' => extractConfigValue($configContent, 'CLUB_MAP_DEFAULT_ZOOM', '8'),
-    'module_events' => extractConfigValue($configContent, 'CLUB_MODULE_EVENTS', 'true') === 'true',
-    'module_polls' => extractConfigValue($configContent, 'CLUB_MODULE_POLLS', 'true') === 'true',
-    'module_proposals' => extractConfigValue($configContent, 'CLUB_MODULE_PROPOSALS', 'true') === 'true',
-    'module_changelog' => extractConfigValue($configContent, 'CLUB_MODULE_CHANGELOG', 'true') === 'true',
-    'module_stats' => extractConfigValue($configContent, 'CLUB_MODULE_STATS', 'true') === 'true',
-    'module_basulm' => extractConfigValue($configContent, 'CLUB_MODULE_BASULM_IMPORT', 'true') === 'true',
-    'module_weather' => extractConfigValue($configContent, 'CLUB_MODULE_WEATHER', 'true') === 'true',
+    'club_name' => get_club_setting('club_name', ''),
+    'club_short_name' => get_club_setting('club_short_name', ''),
+    'club_city' => get_club_setting('club_city', ''),
+    'club_department' => get_club_setting('club_department', ''),
+    'club_region' => get_club_setting('club_region', ''),
+    'club_home_base' => get_club_setting('club_home_base', ''),
+    'club_email' => get_club_setting('club_email_from', ''),
+    'club_phone' => get_club_setting('club_phone', ''),
+    'club_website' => get_club_setting('club_website', ''),
+    'club_facebook' => get_club_setting('club_facebook', ''),
+    'club_address_1' => get_club_setting('club_address_line1', ''),
+    'club_address_2' => get_club_setting('club_address_line2', ''),
+    'club_postal' => get_club_setting('club_address_postal', ''),
+    'logo_path' => get_club_setting('club_logo_path', 'assets/img/logo.png'),
+    'logo_height' => get_club_setting('club_logo_height', 50),
+    'color_primary' => get_club_setting('club_color_primary', '#004b8d'),
+    'color_secondary' => get_club_setting('club_color_secondary', '#00a0c6'),
+    'color_accent' => get_club_setting('club_color_accent', '#0078b8'),
+    'sorties_per_month' => get_club_setting('sorties_per_month', 2),
+    'inscription_min_days' => get_club_setting('inscription_min_days', 3),
+    'notification_days' => get_club_setting('notification_days_before', 7),
+    'priority_double' => get_club_setting('priority_double_inscription', true),
+    'weather_api_key' => get_club_setting('weather_api_key', ''),
+    'map_lat' => get_club_setting('map_default_center_lat', 46.603354),
+    'map_lng' => get_club_setting('map_default_center_lng', 1.888334),
+    'map_zoom' => get_club_setting('map_default_zoom', 6),
+    'module_events' => get_club_setting('module_events', true),
+    'module_polls' => get_club_setting('module_polls', true),
+    'module_proposals' => get_club_setting('module_proposals', true),
+    'module_changelog' => get_club_setting('module_changelog', true),
+    'module_stats' => get_club_setting('module_stats', true),
+    'module_basulm' => get_club_setting('module_basulm_import', true),
+    'module_weather' => get_club_setting('module_weather', true),
 ];
 
 require_once 'header.php';
