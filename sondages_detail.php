@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 require_once 'auth.php';
+require_once 'date_helper.php';
 require_login();
 
 // Vérifier que c'est un admin
@@ -22,18 +23,30 @@ if (!$poll) {
 }
 
 // Récupérer les options avec votes détaillés
-// Trier par date chronologique pour les sondages de type date, sinon par votes
-$order_by = $poll['type'] === 'date' ? 'po.text ASC' : 'votes DESC';
 $stmt = $pdo->prepare("
     SELECT po.*, COUNT(DISTINCT pv.id) as votes
     FROM poll_options po
     LEFT JOIN poll_votes pv ON po.id = pv.option_id
     WHERE po.poll_id = ?
     GROUP BY po.id
-    ORDER BY $order_by
+    ORDER BY po.id ASC
 ");
 $stmt->execute([$poll_id]);
 $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Pour les sondages de type date, trier par ordre chronologique
+if ($poll['type'] === 'date') {
+    usort($options, function($a, $b) {
+        $dateA = parse_french_date($a['text']);
+        $dateB = parse_french_date($b['text']);
+        return $dateA <=> $dateB;
+    });
+} else {
+    // Pour les choix multiples, trier par votes
+    usort($options, function($a, $b) {
+        return $b['votes'] <=> $a['votes'];
+    });
+}
 
 // Récupérer les votes détaillés
 $stmt = $pdo->prepare("

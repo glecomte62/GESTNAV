@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 require_once 'auth.php';
+require_once 'date_helper.php';
 require_login();
 
 // Vérifier que l'utilisateur est administrateur
@@ -683,10 +684,22 @@ require 'header.php';
                     <div class="poll-options">
                         <?php
                         // Trier par date chronologique pour les sondages de type date, sinon par votes
-                        $order_by = $poll['type'] === 'date' ? 'po.text ASC' : 'votes DESC';
-                        $stmt = $pdo->prepare("SELECT po.*, COUNT(pv.id) as votes FROM poll_options po LEFT JOIN poll_votes pv ON po.id = pv.option_id WHERE po.poll_id = ? GROUP BY po.id ORDER BY $order_by");
+                        if ($poll['type'] === 'date') {
+                            $stmt = $pdo->prepare("SELECT po.*, COUNT(pv.id) as votes FROM poll_options po LEFT JOIN poll_votes pv ON po.id = pv.option_id WHERE po.poll_id = ? GROUP BY po.id ORDER BY po.id ASC");
+                        } else {
+                            $stmt = $pdo->prepare("SELECT po.*, COUNT(pv.id) as votes FROM poll_options po LEFT JOIN poll_votes pv ON po.id = pv.option_id WHERE po.poll_id = ? GROUP BY po.id ORDER BY votes DESC");
+                        }
                         $stmt->execute([$poll['id']]);
                         $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        // Pour les sondages de type date, trier les options en PHP par date réelle
+                        if ($poll['type'] === 'date') {
+                            usort($options, function($a, $b) {
+                                $dateA = parse_french_date($a['text']);
+                                $dateB = parse_french_date($b['text']);
+                                return $dateA <=> $dateB;
+                            });
+                        }
                         
                         $total_votes = array_sum(array_column($options, 'votes'));
                         ?>

@@ -1,6 +1,7 @@
 <?php
 require_once 'config.php';
 require_once 'auth.php';
+require_once 'date_helper.php';
 require_login();
 
 $message = '';
@@ -472,18 +473,30 @@ require 'header.php';
 
                         <?php
                         // Récupérer les options et votes
-                        // Trier par date chronologique pour les sondages de type date, sinon par votes
-                        $order_by = $poll['type'] === 'date' ? 'po.text ASC' : 'votes DESC';
                         $stmt = $pdo->prepare("
                             SELECT po.*, COUNT(pv.id) as votes
                             FROM poll_options po
                             LEFT JOIN poll_votes pv ON po.id = pv.option_id
                             WHERE po.poll_id = ?
                             GROUP BY po.id
-                            ORDER BY $order_by
+                            ORDER BY po.id ASC
                         ");
                         $stmt->execute([$poll['id']]);
                         $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        
+                        // Pour les sondages de type date, trier par ordre chronologique
+                        if ($poll['type'] === 'date') {
+                            usort($options, function($a, $b) {
+                                $dateA = parse_french_date($a['text']);
+                                $dateB = parse_french_date($b['text']);
+                                return $dateA <=> $dateB;
+                            });
+                        } else {
+                            // Pour les choix multiples, trier par votes
+                            usort($options, function($a, $b) {
+                                return $b['votes'] <=> $a['votes'];
+                            });
+                        }
 
                         // Récupérer le vote de l'utilisateur
                         $stmt = $pdo->prepare("SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?");
@@ -575,18 +588,30 @@ require 'header.php';
                         <div class="poll-content">
                             <?php
                             // Récupérer les options et votes
-                            // Trier par date chronologique pour les sondages de type date, sinon par votes (meilleur en premier)
-                            $order_by = $poll['type'] === 'date' ? 'po.text ASC' : 'votes DESC';
                             $stmt = $pdo->prepare("
                                 SELECT po.*, COUNT(pv.id) as votes
                                 FROM poll_options po
                                 LEFT JOIN poll_votes pv ON po.id = pv.option_id
                                 WHERE po.poll_id = ?
                                 GROUP BY po.id
-                                ORDER BY $order_by
+                                ORDER BY po.id ASC
                             ");
                             $stmt->execute([$poll['id']]);
                             $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                            
+                            // Pour les sondages de type date, trier par ordre chronologique
+                            if ($poll['type'] === 'date') {
+                                usort($options, function($a, $b) {
+                                    $dateA = parse_french_date($a['text']);
+                                    $dateB = parse_french_date($b['text']);
+                                    return $dateA <=> $dateB;
+                                });
+                            } else {
+                                // Pour les choix multiples, trier par votes
+                                usort($options, function($a, $b) {
+                                    return $b['votes'] <=> $a['votes'];
+                                });
+                            }
 
                             // Récupérer le(s) vote(s) de l'utilisateur
                             $stmt = $pdo->prepare("SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?");
