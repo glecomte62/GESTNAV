@@ -65,13 +65,48 @@ $tmpPath = '';
 $cleanupTemp = false;
 
 try {
-    // Méthode 1: JSON avec base64 (pour contourner ModSecurity)
+    // Méthode 1: Texte déjà extrait côté client (PDF.js)
     $jsonInput = file_get_contents('php://input');
     error_log("parse_pdf_server.php - Input length: " . strlen($jsonInput));
     
     $jsonData = json_decode($jsonInput, true);
 
-    if ($jsonData && isset($jsonData['pdf_base64'])) {
+    if ($jsonData && isset($jsonData['text'])) {
+        // Texte pré-extrait envoyé par PDF.js
+        error_log("parse_pdf_server.php - Réception texte pré-extrait");
+        
+        $text = $jsonData['text'];
+        $filename = $jsonData['filename'] ?? 'document.pdf';
+        
+        error_log("Texte reçu: " . strlen($text) . " caractères");
+        error_log("Aperçu: " . substr($text, 0, 200));
+        
+        // Analyser directement le texte
+        $analyzer = new DocumentAnalyzer();
+        $analysis = $analyzer->analyze($text, $filename);
+        
+        // Retourner les résultats
+        echo json_encode([
+            'success' => true,
+            'method' => 'client_extraction',
+            'text_preview' => substr($text, 0, 500),
+            'text_length' => strlen($text),
+            'description' => $analysis['description'] ?? '',
+            'supplier' => $analysis['supplier'] ?? '',
+            'amount' => $analysis['amount'] ?? null,
+            'is_ttc' => $analysis['is_ttc'] ?? false,
+            'date_iso' => $analysis['date'] ?? null,
+            'metadata' => [
+                'dates' => $analysis['dates'] ?? [],
+                'amounts' => $analysis['amounts'] ?? [],
+                'total_amount' => $analysis['amount'] ?? null,
+                'is_ttc' => $analysis['is_ttc'] ?? false
+            ]
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+        
+    } else if ($jsonData && isset($jsonData['pdf_base64'])) {
+        // Méthode 2: PDF base64 classique
         error_log("parse_pdf_server.php - Réception base64");
         
         // Décoder le base64

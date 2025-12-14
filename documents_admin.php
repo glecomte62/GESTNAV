@@ -1498,46 +1498,45 @@ if (dropZone && fileInput) {
         const descInput = document.querySelector('textarea[name="description"]');
         
         try {
-            // MÉTHODE 1: Parser serveur (PRIORITAIRE - Plus fiable pour PDF)
+            // STRATÉGIE HYBRIDE : PDF.js (client) + Analyse serveur
             if (ext === 'pdf') {
-                try {
-                    // Lire le fichier en base64 pour contourner ModSecurity
-                    const reader = new FileReader();
-                    const base64Promise = new Promise((resolve, reject) => {
-                        reader.onload = () => resolve(reader.result.split(',')[1]);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(file);
-                    });
+                console.log('🔄 Extraction texte PDF avec PDF.js côté client...');
+                
+                // ÉTAPE 1: Extraire le texte avec PDF.js
+                const extractedText = await readPDF(file);
+                
+                if (extractedText && extractedText.length > 20) {
+                    console.log('✅ Texte extrait par PDF.js:', extractedText.length, 'caractères');
+                    console.log('📄 Aperçu:', extractedText.substring(0, 300));
                     
-                    const base64Data = await base64Promise;
-                    
-                    const serverResponse = await fetch('parse_pdf_server.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            pdf_base64: base64Data,
-                            filename: file.name
-                        })
-                    });
-                    
-                    console.log('🔍 Réponse serveur - Status:', serverResponse.status, serverResponse.statusText);
-                    
-                    if (serverResponse.ok) {
-                        // Lire d'abord le texte brut pour debug
-                        const rawText = await serverResponse.text();
-                        console.log('📄 Réponse brute (premiers 500 car):', rawText.substring(0, 500));
+                    // ÉTAPE 2: Envoyer le texte au serveur pour analyse intelligente
+                    try {
+                        const serverResponse = await fetch('parse_pdf_server.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                text: extractedText,
+                                filename: file.name
+                            })
+                        });
                         
-                        try {
-                            const data = JSON.parse(rawText);
-                            console.log('📄 Analyse serveur - Données complètes:', data);
+                        console.log('🔍 Réponse serveur - Status:', serverResponse.status, serverResponse.statusText);
                         
-                            if (data.success) {
-                                console.log('✅ Parser serveur réussi - Méthode:', data.method);
-                                
-                                // Pré-remplir la date (priorité à date_iso)
-                                if (data.date_iso) {
+                        if (serverResponse.ok) {
+                            const rawText = await serverResponse.text();
+                            console.log('📄 Réponse brute:', rawText.substring(0, 500));
+                            
+                            try {
+                                const data = JSON.parse(rawText);
+                                console.log('📄 Analyse serveur - Données:', data);
+                            
+                                if (data.success) {
+                                    console.log('✅ Analyse réussie - Méthode:', data.method);
+                                    
+                                    // Pré-remplir la date
+                                    if (data.date_iso) {
                                     const dateInput = document.getElementById('document_date');
                                     if (dateInput && !dateInput.value) {
                                         dateInput.value = data.date_iso;
@@ -1643,18 +1642,26 @@ if (dropZone && fileInput) {
                         const errorText = await serverResponse.text();
                         console.error('❌ Erreur serveur HTTP', serverResponse.status, ':', errorText);
                     }
-                } catch (error) {
-                    console.error('❌ Parser serveur - Exception:', error);
+                            } catch (parseError) {
+                                console.error('❌ Erreur parsing JSON:', parseError);
+                                console.error('Réponse complète:', rawText);
+                            }
+                        } else {
+                            const errorText = await serverResponse.text();
+                            console.error('❌ Erreur serveur HTTP', serverResponse.status, ':', errorText);
+                        }
+                    } catch (error) {
+                        console.error('❌ Analyse serveur - Exception:', error);
+                    }
+                } else {
+                    console.warn('⚠️ PDF.js n\'a pas extrait de texte (PDF protégé ou corrompu)');
                 }
             }
             
-            // MÉTHODE 2: Fallback client-side
+            // MÉTHODE 2: Fichiers non-PDF (TXT, CSV, etc.)
             let extractedText = '';
             
-            if (ext === 'pdf') {
-                // Lire le PDF côté client (fallback)
-                extractedText = await readPDF(file);
-            } else if (['txt', 'csv', 'log'].includes(ext)) {
+            if (ext === 'txt' || ext === 'csv' || ext === 'log') {
                 // Lire les fichiers texte
                 extractedText = await readTextFile(file);
             } else if (['doc', 'docx'].includes(ext)) {
@@ -1730,11 +1737,19 @@ if (dropZone && fileInput) {
     }
     
     async function readPDF(file) {
-        if (typeof pdfjsLib === 'undefined') return '';
+        console.log('🔍 Tentative lecture PDF avec PDF.js...');
+        
+        if (typeof pdfjsLib === 'undefined') {
+            console.error('❌ PDF.js non chargé');
+            return '';
+        }
         
         try {
             const arrayBuffer = await file.arrayBuffer();
+            console.log('📄 ArrayBuffer créé:', arrayBuffer.byteLength, 'bytes');
+            
             const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            console.log('📚 PDF chargé:', pdf.numPages, 'pages');
             
             let fullText = '';
             // Lire jusqu'à 10 pages pour meilleure détection
@@ -1746,11 +1761,15 @@ if (dropZone && fileInput) {
                 // Conserver la structure avec espaces et retours à la ligne
                 const pageText = textContent.items.map(item => item.str).join(' ');
                 fullText += pageText + '\n';
+                console.log(`📄 Page ${i}: ${pageText.length} caractères extraits`);
             }
+            
+            console.log('✅ Extraction PDF.js réussie:', fullText.length, 'caractères');
+            console.log('📄 Aperçu:', fullText.substring(0, 200));
             
             return fullText;
         } catch (error) {
-            console.log('Erreur lecture PDF:', error);
+            console.error('❌ Erreur lecture PDF:', error);
             return '';
         }
     }
