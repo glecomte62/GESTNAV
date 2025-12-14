@@ -472,13 +472,15 @@ require 'header.php';
 
                         <?php
                         // Récupérer les options et votes
+                        // Trier par date chronologique pour les sondages de type date, sinon par votes
+                        $order_by = $poll['type'] === 'date' ? 'po.text ASC' : 'votes DESC';
                         $stmt = $pdo->prepare("
                             SELECT po.*, COUNT(pv.id) as votes
                             FROM poll_options po
                             LEFT JOIN poll_votes pv ON po.id = pv.option_id
                             WHERE po.poll_id = ?
                             GROUP BY po.id
-                            ORDER BY votes DESC
+                            ORDER BY $order_by
                         ");
                         $stmt->execute([$poll['id']]);
                         $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -573,13 +575,15 @@ require 'header.php';
                         <div class="poll-content">
                             <?php
                             // Récupérer les options et votes
+                            // Trier par date chronologique pour les sondages de type date, sinon par votes (meilleur en premier)
+                            $order_by = $poll['type'] === 'date' ? 'po.text ASC' : 'votes DESC';
                             $stmt = $pdo->prepare("
                                 SELECT po.*, COUNT(pv.id) as votes
                                 FROM poll_options po
                                 LEFT JOIN poll_votes pv ON po.id = pv.option_id
                                 WHERE po.poll_id = ?
                                 GROUP BY po.id
-                                ORDER BY votes DESC
+                                ORDER BY $order_by
                             ");
                             $stmt->execute([$poll['id']]);
                             $options = $stmt->fetchAll(PDO::FETCH_ASSOC);

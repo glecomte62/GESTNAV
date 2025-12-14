@@ -682,7 +682,9 @@ require 'header.php';
                     <!-- Options et résultats -->
                     <div class="poll-options">
                         <?php
-                        $stmt = $pdo->prepare("SELECT po.*, COUNT(pv.id) as votes FROM poll_options po LEFT JOIN poll_votes pv ON po.id = pv.option_id WHERE po.poll_id = ? GROUP BY po.id ORDER BY votes DESC");
+                        // Trier par date chronologique pour les sondages de type date, sinon par votes
+                        $order_by = $poll['type'] === 'date' ? 'po.text ASC' : 'votes DESC';
+                        $stmt = $pdo->prepare("SELECT po.*, COUNT(pv.id) as votes FROM poll_options po LEFT JOIN poll_votes pv ON po.id = pv.option_id WHERE po.poll_id = ? GROUP BY po.id ORDER BY $order_by");
                         $stmt->execute([$poll['id']]);
                         $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         
