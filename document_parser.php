@@ -96,42 +96,83 @@ class DocumentParser {
      * Méthode basique qui extrait les chaînes de texte visibles
      */
     private function extractRawPDFText() {
-        $content = file_get_contents($this->file_path);
-        if ($content === false) {
+        $content = @file_get_contents($this->file_path);
+        if ($content === false || strlen($content) < 100) {
             return '';
         }
         
         $text = '';
+        $found_text = false;
         
-        // Méthode 1: Extraction des streams de texte entre parenthèses
-        if (preg_match_all('/\(([^\)]*)\)/s', $content, $matches)) {
+        // Méthode 1: Extraction agressive de tout texte entre parenthèses (plus permissive)
+        if (preg_match_all('/\(([^\)]{2,})\)/s', $content, $matches)) {
             foreach ($matches[1] as $match) {
                 // Décoder les caractères échappés
                 $decoded = $this->decodePDFString($match);
-                if (strlen($decoded) > 3) { // Ignorer les très courtes chaînes
+                // Moins restrictif: accepter même les courtes chaînes
+                if (strlen(trim($decoded)) > 0) {
                     $text .= $decoded . ' ';
+                    $found_text = true;
                 }
             }
         }
         
-        // Méthode 2: Extraction des objets texte
+        // Méthode 2: Extraction des objets texte BT...ET
         if (preg_match_all('/BT\s+(.*?)\s+ET/s', $content, $matches)) {
             foreach ($matches[1] as $match) {
-                // Extraire le texte des commandes Tj
-                if (preg_match_all('/\(([^\)]+)\)\s*Tj/s', $match, $textMatches)) {
+                // Extraire le texte des commandes Tj et TJ
+                if (preg_match_all('/\(([^\)]+)\)\s*T[jJ]/s', $match, $textMatches)) {
                     foreach ($textMatches[1] as $textMatch) {
                         $decoded = $this->decodePDFString($textMatch);
                         $text .= $decoded . ' ';
+                        $found_text = true;
+                    }
+                }
+                // Tableau de texte
+                if (preg_match_all('/\[\s*\(([^\)]+)\)\s*\]/s', $match, $arrayMatches)) {
+                    foreach ($arrayMatches[1] as $arrayMatch) {
+                        $decoded = $this->decodePDFString($arrayMatch);
+                        $text .= $decoded . ' ';
+                        $found_text = true;
                     }
                 }
             }
         }
         
-        // Nettoyer le texte
-        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $text);
-        $text = preg_replace('/\s+/', ' ', $text);
+        // Méthode 3: Extraction hexadécimale <...>
+        if (preg_match_all('/<([0-9A-Fa-f]+)>/s', $content, $hexMatches)) {
+            foreach ($hexMatches[1] as $hex) {
+                if (strlen($hex) % 2 == 0) {
+                    $decoded = '';
+                    for ($i = 0; $i < strlen($hex); $i += 2) {
+                        $byte = hexdec(substr($hex, $i, 2));
+                        if ($byte >= 32 && $byte < 127) {
+                            $decoded .= chr($byte);
+                        }
+                    }
+                    if (strlen($decoded) > 0) {
+                        $text .= $decoded . ' ';
+                        $found_text = true;
+                    }
+                }
+            }
+        }
         
-        return trim($text);
+        // Si aucun texte trouvé, essayer extraction ultra-basique
+        if (!$found_text) {
+            // Chercher toutes les chaînes ASCII imprimables de 4+ caractères
+            if (preg_match_all('/[\x20-\x7E]{4,}/', $content, $asciiMatches)) {
+                $text = implode(' ', $asciiMatches[0]);
+                $found_text = strlen($text) > 50;
+            }
+        }
+        
+        // Nettoyer le texte
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/', '', $text);
+        $text = preg_replace('/\s+/', ' ', $text);
+        $text = trim($text);
+        
+        return strlen($text) > 20 ? $text : '';
     }
     
     /**
