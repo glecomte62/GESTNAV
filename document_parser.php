@@ -72,14 +72,86 @@ class DocumentParser {
                 $this->metadata['author'] = $details['Author'] ?? '';
                 $this->metadata['creation_date'] = $details['CreationDate'] ?? '';
                 
-                return true;
+                if (!empty(trim($this->extracted_text))) {
+                    return true;
+                }
             } catch (Exception $e) {
                 // Continuer vers méthode suivante
             }
         }
         
-        // Méthode 3 : Convertir en images puis OCR
+        // Méthode 3 : Extraction brute (fallback sans dépendances)
+        $text = $this->extractRawPDFText();
+        if (!empty($text)) {
+            $this->extracted_text = $text;
+            return true;
+        }
+        
+        // Méthode 4 : Convertir en images puis OCR
         return $this->parsePDFAsImages();
+    }
+    
+    /**
+     * Extraction brute du texte PDF (fallback sans dépendances)
+     * Méthode basique qui extrait les chaînes de texte visibles
+     */
+    private function extractRawPDFText() {
+        $content = file_get_contents($this->file_path);
+        if ($content === false) {
+            return '';
+        }
+        
+        $text = '';
+        
+        // Méthode 1: Extraction des streams de texte entre parenthèses
+        if (preg_match_all('/\(([^\)]*)\)/s', $content, $matches)) {
+            foreach ($matches[1] as $match) {
+                // Décoder les caractères échappés
+                $decoded = $this->decodePDFString($match);
+                if (strlen($decoded) > 3) { // Ignorer les très courtes chaînes
+                    $text .= $decoded . ' ';
+                }
+            }
+        }
+        
+        // Méthode 2: Extraction des objets texte
+        if (preg_match_all('/BT\s+(.*?)\s+ET/s', $content, $matches)) {
+            foreach ($matches[1] as $match) {
+                // Extraire le texte des commandes Tj
+                if (preg_match_all('/\(([^\)]+)\)\s*Tj/s', $match, $textMatches)) {
+                    foreach ($textMatches[1] as $textMatch) {
+                        $decoded = $this->decodePDFString($textMatch);
+                        $text .= $decoded . ' ';
+                    }
+                }
+            }
+        }
+        
+        // Nettoyer le texte
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/u', '', $text);
+        $text = preg_replace('/\s+/', ' ', $text);
+        
+        return trim($text);
+    }
+    
+    /**
+     * Décode une chaîne PDF (gère les échappements)
+     */
+    private function decodePDFString($str) {
+        // Décoder les séquences d'échappement
+        $str = str_replace('\\n', "\n", $str);
+        $str = str_replace('\\r', "\r", $str);
+        $str = str_replace('\\t', "\t", $str);
+        $str = str_replace('\\(', '(', $str);
+        $str = str_replace('\\)', ')', $str);
+        $str = str_replace('\\\\', '\\', $str);
+        
+        // Décoder les séquences octales (\000)
+        $str = preg_replace_callback('/\\\\([0-7]{1,3})/', function($m) {
+            return chr(octdec($m[1]));
+        }, $str);
+        
+        return $str;
     }
     
     /**
