@@ -10,7 +10,6 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'vote') {
     try {
         $poll_id = intval($_POST['poll_id']);
-        $option_id = intval($_POST['option_id']);
         $user_id = $_SESSION['user_id'];
 
         // Vérifier que le sondage existe et est ouvert
@@ -22,26 +21,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             throw new Exception('Sondage non trouvé ou fermé');
         }
 
-        // Vérifier que l'option existe
-        $stmt = $pdo->prepare("SELECT * FROM poll_options WHERE id = ? AND poll_id = ?");
-        $stmt->execute([$option_id, $poll_id]);
-        if (!$stmt->fetch(PDO::FETCH_ASSOC)) {
-            throw new Exception('Option invalide');
+        // Récupérer les options sélectionnées
+        $option_ids = isset($_POST['option_ids']) ? $_POST['option_ids'] : (isset($_POST['option_id']) ? [$_POST['option_id']] : []);
+        
+        if (empty($option_ids)) {
+            throw new Exception('Veuillez sélectionner au moins une option');
         }
 
-        // Vérifier si l'utilisateur a déjà voté
-        $stmt = $pdo->prepare("SELECT * FROM poll_votes WHERE poll_id = ? AND user_id = ?");
-        $stmt->execute([$poll_id, $user_id]);
-        $existing_vote = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Si choix multiple non autorisé, limiter à une seule option
+        if (!$poll['allow_multiple_choices'] && count($option_ids) > 1) {
+            throw new Exception('Ce sondage n\'autorise qu\'un seul choix');
+        }
 
-        if ($existing_vote) {
-            // Modifier le vote
-            $stmt = $pdo->prepare("UPDATE poll_votes SET option_id = ? WHERE poll_id = ? AND user_id = ?");
-            $stmt->execute([$option_id, $poll_id, $user_id]);
-        } else {
-            // Ajouter un nouveau vote
-            $stmt = $pdo->prepare("INSERT INTO poll_votes (poll_id, user_id, option_id) VALUES (?, ?, ?)");
-            $stmt->execute([$poll_id, $user_id, $option_id]);
+        // Vérifier que toutes les options existent
+        foreach ($option_ids as $option_id) {
+            $option_id = intval($option_id);
+            $stmt = $pdo->prepare("SELECT * FROM poll_options WHERE id = ? AND poll_id = ?");
+            $stmt->execute([$option_id, $poll_id]);
+            if (!$stmt->fetch(PDO::FETCH_ASSOC)) {
+                throw new Exception('Option invalide');
+            }
+        }
+
+        // Supprimer les votes existants de l'utilisateur pour ce sondage
+        $stmt = $pdo->prepare("DELETE FROM poll_votes WHERE poll_id = ? AND user_id = ?");
+        $stmt->execute([$poll_id, $user_id]);
+
+        // Ajouter les nouveaux votes
+        $stmt = $pdo->prepare("INSERT INTO poll_votes (poll_id, user_id, option_id) VALUES (?, ?, ?)");
+        foreach ($option_ids as $option_id) {
+            $stmt->execute([$poll_id, $user_id, intval($option_id)]);
         }
 
         $message = "✅ Votre vote a été enregistré !";
@@ -67,6 +76,24 @@ try {
 } catch (Exception $e) {
     $polls = [];
     $error = "Erreur lors du chargement des sondages: " . $e->getMessage();
+}
+
+// Récupérer les sondages clôturés
+try {
+    $stmt = $pdo->prepare("
+        SELECT p.*, u.email, COUNT(DISTINCT pv.id) as total_votes
+        FROM polls p
+        LEFT JOIN users u ON p.creator_id = u.id
+        LEFT JOIN poll_votes pv ON p.id = pv.poll_id
+        WHERE p.status = 'cloture' 
+        OR (p.deadline IS NOT NULL AND p.deadline <= NOW())
+        GROUP BY p.id
+        ORDER BY COALESCE(p.deadline, p.created_at) DESC
+    ");
+    $stmt->execute();
+    $closed_polls = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $closed_polls = [];
 }
 
 require 'header.php';
@@ -267,6 +294,17 @@ require 'header.php';
     padding: 0.5rem 0;
 }
 
+.multiple-choice-notice {
+    background: #dcfce7;
+    border-left: 4px solid #10b981;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.5rem;
+    color: #166534;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
 .empty-state {
     text-align: center;
     padding: 3rem 2rem;
@@ -298,6 +336,70 @@ require 'header.php';
     font-size: 0.85rem;
     color: #92400e;
     margin-bottom: 1rem;
+}
+
+.closed-section {
+    margin-top: 4rem;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #6b7280;
+    margin: 0 0 0.5rem;
+}
+
+.section-subtitle {
+    color: #9ca3af;
+    font-size: 0.95rem;
+}
+
+.poll-card.closed {
+    opacity: 0.85;
+    border: 1px solid #e5e7eb;
+}
+
+.closed-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #fef2f2;
+    color: #991b1b;
+    margin-bottom: 0.75rem;
+}
+
+.results-bar {
+    margin-top: 0.5rem;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.results-bar-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #004b8d 0%, #00a0c6 100%);
+    transition: width 0.5s ease;
+}
+
+.winner-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #ecfdf5;
+    color: #047857;
+    margin-left: 0.5rem;
 }
 
 @media (max-width: 768px) {
@@ -384,17 +486,25 @@ require 'header.php';
                         // Récupérer le vote de l'utilisateur
                         $stmt = $pdo->prepare("SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?");
                         $stmt->execute([$poll['id'], $_SESSION['user_id']]);
-                        $user_vote = $stmt->fetch(PDO::FETCH_ASSOC);
-                        $user_option_id = $user_vote ? $user_vote['option_id'] : null;
+                        $user_votes = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
                         $total_votes = array_sum(array_column($options, 'votes'));
+                        
+                        $input_type = !empty($poll['allow_multiple_choices']) ? 'checkbox' : 'radio';
+                        $input_name = !empty($poll['allow_multiple_choices']) ? 'option_ids[]' : 'option_id';
                         ?>
+
+                        <?php if (!empty($poll['allow_multiple_choices'])): ?>
+                            <div class="multiple-choice-notice">
+                                ✅ Vous pouvez sélectionner plusieurs options
+                            </div>
+                        <?php endif; ?>
 
                         <?php foreach ($options as $option): ?>
                             <div class="poll-option">
                                 <label>
-                                    <input type="radio" name="option_id" value="<?php echo $option['id']; ?>" 
-                                        <?php echo $user_option_id == $option['id'] ? 'checked' : ''; ?>>
+                                    <input type="<?php echo $input_type; ?>" name="<?php echo $input_name; ?>" value="<?php echo $option['id']; ?>" 
+                                        <?php echo in_array($option['id'], $user_votes) ? 'checked' : ''; ?>>
                                     <span class="poll-option-text"><?php echo htmlspecialchars($option['text']); ?></span>
                                     <span class="poll-option-votes">
                                         <?php echo $option['votes']; ?> vote<?php echo $option['votes'] !== 1 ? 's' : ''; ?>
@@ -407,9 +517,9 @@ require 'header.php';
                         <?php endforeach; ?>
 
                         <!-- Info de vote utilisateur -->
-                        <?php if ($user_option_id): ?>
+                        <?php if (!empty($user_votes)): ?>
                             <div class="user-vote-info">
-                                ✅ Vous avez voté pour cette option
+                                ✅ Vous avez voté pour <?php echo count($user_votes); ?> option<?php echo count($user_votes) > 1 ? 's' : ''; ?>
                             </div>
                         <?php endif; ?>
 
@@ -436,6 +546,97 @@ require 'header.php';
                     </div>
                 </div>
             <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
+    <!-- Sondages clôturés -->
+    <?php if (!empty($closed_polls)): ?>
+        <div class="closed-section">
+            <div class="section-header">
+                <h2 class="section-title">🔒 Sondages clôturés</h2>
+                <p class="section-subtitle">Résultats des votes précédents</p>
+            </div>
+
+            <div class="polls-container">
+                <?php foreach ($closed_polls as $poll): ?>
+                    <div class="poll-card closed">
+                        <!-- En-tête du sondage -->
+                        <div class="poll-header">
+                            <span class="closed-badge">🔒 Clôturé</span>
+                            <h2 class="poll-title"><?php echo htmlspecialchars($poll['titre']); ?></h2>
+                            <?php if (!empty($poll['description'])): ?>
+                                <p class="poll-description"><?php echo htmlspecialchars($poll['description']); ?></p>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Résultats -->
+                        <div class="poll-content">
+                            <?php
+                            // Récupérer les options et votes
+                            $stmt = $pdo->prepare("
+                                SELECT po.*, COUNT(pv.id) as votes
+                                FROM poll_options po
+                                LEFT JOIN poll_votes pv ON po.id = pv.option_id
+                                WHERE po.poll_id = ?
+                                GROUP BY po.id
+                                ORDER BY votes DESC
+                            ");
+                            $stmt->execute([$poll['id']]);
+                            $options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                            // Récupérer le(s) vote(s) de l'utilisateur
+                            $stmt = $pdo->prepare("SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?");
+                            $stmt->execute([$poll['id'], $_SESSION['user_id']]);
+                            $user_votes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+                            $total_votes = array_sum(array_column($options, 'votes'));
+                            $max_votes = $total_votes > 0 ? max(array_column($options, 'votes')) : 0;
+                            ?>
+
+                            <?php foreach ($options as $idx => $option): ?>
+                                <div style="margin-bottom: 1.25rem;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                        <span style="font-weight: 500; color: #1f2937;">
+                                            <?php echo htmlspecialchars($option['text']); ?>
+                                            <?php if (in_array($option['id'], $user_votes)): ?>
+                                                <span style="color: #10b981; font-size: 0.85rem;">✓ Votre vote</span>
+                                            <?php endif; ?>
+                                            <?php if ($idx === 0 && $option['votes'] > 0): ?>
+                                                <span class="winner-badge">🏆 Gagnant</span>
+                                            <?php endif; ?>
+                                        </span>
+                                        <span style="font-weight: 600; color: #4b5563;">
+                                            <?php echo $option['votes']; ?> vote<?php echo $option['votes'] !== 1 ? 's' : ''; ?>
+                                            <?php if ($total_votes > 0): ?>
+                                                <span style="color: #9ca3af; margin-left: 0.25rem;">
+                                                    (<?php echo round($option['votes'] / $total_votes * 100); ?>%)
+                                                </span>
+                                            <?php endif; ?>
+                                        </span>
+                                    </div>
+                                    <div class="results-bar">
+                                        <div class="results-bar-fill" style="width: <?php echo $total_votes > 0 ? ($option['votes'] / $total_votes * 100) : 0; ?>%;"></div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Pied de page -->
+                        <div class="poll-footer">
+                            <div class="poll-meta">
+                                <div class="poll-meta-item">
+                                    🗳️ <strong><?php echo $poll['total_votes']; ?></strong> vote<?php echo $poll['total_votes'] !== 1 ? 's' : ''; ?>
+                                </div>
+                                <?php if ($poll['deadline']): ?>
+                                    <div class="poll-meta-item">
+                                        🏁 Clôturé le <?php echo date('d/m/Y', strtotime($poll['deadline'])); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
         </div>
     <?php endif; ?>
 </div>

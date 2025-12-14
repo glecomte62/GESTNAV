@@ -60,6 +60,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Éditer un sondage
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'edit') {
+    try {
+        $poll_id = intval($_POST['poll_id']);
+        $titre = trim($_POST['titre'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+        $allow_multiple_choices = isset($_POST['allow_multiple_choices']) ? 1 : 0;
+        $deadline = !empty($_POST['deadline']) ? $_POST['deadline'] : null;
+
+        if (empty($titre)) {
+            throw new Exception('Le titre est requis');
+        }
+
+        $stmt = $pdo->prepare("UPDATE polls SET titre = ?, description = ?, allow_multiple_choices = ?, deadline = ? WHERE id = ? AND creator_id = ?");
+        $stmt->execute([$titre, $description, $allow_multiple_choices, $deadline, $poll_id, $_SESSION['user_id']]);
+        $message = "✅ Sondage modifié avec succès";
+    } catch (Exception $e) {
+        $error = "❌ Erreur : " . $e->getMessage();
+    }
+}
+
 // Clôturer un sondage
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'close') {
     try {
@@ -70,6 +91,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     } catch (Exception $e) {
         $error = "❌ Erreur : " . $e->getMessage();
     }
+}
+
+// Récupérer un sondage spécifique pour édition
+$poll_to_edit = null;
+if (isset($_GET['edit'])) {
+    $edit_id = intval($_GET['edit']);
+    $stmt = $pdo->prepare("SELECT * FROM polls WHERE id = ? AND creator_id = ?");
+    $stmt->execute([$edit_id, $_SESSION['user_id']]);
+    $poll_to_edit = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
 // Récupérer les sondages
@@ -400,7 +430,127 @@ require 'header.php';
     font-size: 3rem;
     margin-bottom: 1rem;
 }
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 1.25rem;
+    padding: 2rem;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.5rem;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0.25rem;
+    line-height: 1;
+}
+
+.btn-close:hover {
+    color: #1f2937;
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 0.85rem;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+}
 </style>
+
+<!-- Modal d'édition -->
+<?php if ($poll_to_edit): ?>
+<div class="modal-overlay" id="editModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>✏️ Éditer le sondage</h2>
+            <button type="button" class="btn-close" onclick="closeEditModal()">&times;</button>
+        </div>
+
+        <form method="POST">
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="poll_id" value="<?php echo $poll_to_edit['id']; ?>">
+
+            <div class="form-group">
+                <label>📋 Titre du sondage *</label>
+                <input type="text" name="titre" value="<?php echo htmlspecialchars($poll_to_edit['titre']); ?>" required>
+            </div>
+
+            <div class="form-group">
+                <label>📝 Description</label>
+                <textarea name="description"><?php echo htmlspecialchars($poll_to_edit['description']); ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" name="allow_multiple_choices" value="1" <?php echo !empty($poll_to_edit['allow_multiple_choices']) ? 'checked' : ''; ?> style="width: auto;">
+                    <span>✅ Autoriser le choix multiple (les membres peuvent voter pour plusieurs options)</span>
+                </label>
+                <div class="options-note" style="margin-top: 0.5rem;">
+                    Particulièrement utile pour les sondages de dates où un membre peut être disponible plusieurs jours
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>⏰ Date de fermeture (optionnel)</label>
+                <input type="datetime-local" name="deadline" value="<?php echo $poll_to_edit['deadline'] ? date('Y-m-d\TH:i', strtotime($poll_to_edit['deadline'])) : ''; ?>">
+                <div class="options-note">Laissez vide pour fermer manuellement</div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary" style="flex: 1;">💾 Enregistrer</button>
+                <button type="button" class="btn-secondary" onclick="closeEditModal()" style="flex: 1;">❌ Annuler</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="sondages-container">
     <h1 class="section-title">🗳️ Gestion des sondages</h1>
@@ -570,6 +720,9 @@ require 'header.php';
                             👁️ Détails
                         </a>
                         <?php if ($poll['status'] === 'ouvert'): ?>
+                            <a href="?edit=<?php echo $poll['id']; ?>" class="btn-secondary btn-sm" style="text-decoration: none; text-align: center; flex: 1;">
+                                ✏️ Éditer
+                            </a>
                             <form method="POST" class="form-inline" style="flex: 1;">
                                 <input type="hidden" name="action" value="close">
                                 <input type="hidden" name="poll_id" value="<?php echo $poll['id']; ?>">
@@ -609,6 +762,10 @@ function setType(type) {
 
 function updateFormFields() {
     // Sync when form changes
+}
+
+function closeEditModal() {
+    window.location.href = 'sondages_admin.php';
 }
 </script>
 
