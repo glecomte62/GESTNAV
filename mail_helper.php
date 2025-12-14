@@ -148,6 +148,34 @@ function gestnav_send_mail(PDO $pdo, $to, string $subject, string $html_body, ?s
         // ---- ENVOI ----
         $mail->send();
 
+        // ---- LOG DANS email_logs ----
+        try {
+            // Extraire les destinataires pour le log
+            $recipients = [];
+            if (is_string($to)) {
+                $recipients[] = $to;
+            } elseif (is_array($to)) {
+                foreach ($to as $email => $name) {
+                    $recipients[] = is_int($email) ? $name : $email;
+                }
+            }
+            $recipient_emails = implode(', ', $recipients);
+            
+            // Enregistrer dans email_logs
+            $sender_id = $_SESSION['user_id'] ?? null;
+            $stmtLog = $pdo->prepare("INSERT INTO email_logs (sender_id, recipient_email, subject, message_html, message_text, status, created_at) VALUES (?, ?, ?, ?, ?, 'sent', NOW())");
+            $stmtLog->execute([
+                $sender_id,
+                $recipient_emails,
+                $subject,
+                $html_body,
+                $text_body
+            ]);
+        } catch (PDOException $e) {
+            // Si la table n'existe pas, on ignore l'erreur (l'email est quand même envoyé)
+            error_log("Impossible d'enregistrer l'email dans email_logs: " . $e->getMessage());
+        }
+
         return [
             'success' => true,
             'error'   => null

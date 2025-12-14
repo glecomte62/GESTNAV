@@ -1567,6 +1567,83 @@ require 'header.php'; ?>
     </div>
     <?php endif; ?>
 
+    <?php
+    // Récupérer l'historique des emails pour cette sortie
+    $sortie_emails = [];
+    try {
+        $stmtEmails = $pdo->prepare("
+            SELECT el.*, u.nom, u.prenom 
+            FROM email_logs el
+            LEFT JOIN users u ON u.id = el.sender_id
+            WHERE el.subject LIKE ? OR el.message_html LIKE ?
+            ORDER BY el.created_at DESC
+            LIMIT 50
+        ");
+        $search_pattern = '%' . $sortie['titre'] . '%';
+        $stmtEmails->execute([$search_pattern, $search_pattern]);
+        $sortie_emails = $stmtEmails->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Table n'existe pas encore
+        $sortie_emails = [];
+    }
+    ?>
+
+    <?php if (!empty($sortie_emails)): ?>
+    <div class="card">
+        <h2 class="card-title">📧 Historique des emails envoyés</h2>
+        <p class="card-subtitle">Emails envoyés en rapport avec cette sortie</p>
+        <div style="overflow-x: auto;">
+            <table class="table table-hover" style="margin:0;">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Expéditeur</th>
+                        <th>Destinataire(s)</th>
+                        <th>Sujet</th>
+                        <th>Statut</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($sortie_emails as $email): ?>
+                    <tr>
+                        <td style="white-space:nowrap;"><?= htmlspecialchars(date('d/m/Y H:i', strtotime($email['created_at']))) ?></td>
+                        <td>
+                            <?php if (!empty($email['nom']) || !empty($email['prenom'])): ?>
+                                <?= htmlspecialchars(trim(($email['prenom'] ?? '') . ' ' . ($email['nom'] ?? ''))) ?>
+                            <?php else: ?>
+                                <span style="color:#999;">Système</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php
+                                $recipients = explode(', ', $email['recipient_email']);
+                                if (count($recipients) > 2) {
+                                    echo htmlspecialchars($recipients[0]) . ', ' . htmlspecialchars($recipients[1]) . ' <span style="color:#666;">et ' . (count($recipients) - 2) . ' autre(s)</span>';
+                                } else {
+                                    echo htmlspecialchars($email['recipient_email']);
+                                }
+                            ?>
+                        </td>
+                        <td><?= htmlspecialchars(mb_substr($email['subject'], 0, 60)) ?><?= mb_strlen($email['subject']) > 60 ? '...' : '' ?></td>
+                        <td>
+                            <span class="badge-pill" style="background:<?= $email['status'] === 'sent' ? '#e7f7ec' : '#fde8e8' ?>;color:<?= $email['status'] === 'sent' ? '#0a8a0a' : '#b02525' ?>;">
+                                <?= $email['status'] === 'sent' ? '✓ Envoyé' : '✗ Erreur' ?>
+                            </span>
+                        </td>
+                        <td>
+                            <a href="get_email_detail.php?id=<?= (int)$email['id'] ?>" target="_blank" class="btn btn-sm btn-outline-primary" style="padding:0.25rem 0.5rem;font-size:0.8rem;">
+                                👁️ Voir
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <form method="post" id="affectationsForm" action="sortie_detail.php?sortie_id=<?= (int)$sortie_id ?>">
         <input type="hidden" name="sortie_id" value="<?= (int)$sortie_id ?>">
         <div class="card">
