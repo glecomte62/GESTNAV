@@ -733,17 +733,20 @@ table tr:hover {
     font-size: 4rem;
     color: #004b8d;
     margin-bottom: 15px;
+    pointer-events: none;
 }
 
 .drag-drop-zone .text {
     font-size: 1.1rem;
     color: #333;
     margin-bottom: 10px;
+    pointer-events: none;
 }
 
 .drag-drop-zone .subtext {
     font-size: 0.9rem;
     color: #666;
+    pointer-events: none;
 }
 
 .file-info {
@@ -1251,30 +1254,33 @@ table tr:hover {
 </div>
 
 <script>
-// Gestion du drag & drop
-console.log('🚀 Initialisation drag & drop...');
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const fileInfo = document.getElementById('fileInfo');
-const fileName = document.getElementById('fileName');
-const fileSize = document.getElementById('fileSize');
-
-console.log('dropZone:', dropZone);
-console.log('fileInput:', fileInput);
-
-if (dropZone && fileInput) {
-    console.log('✅ Éléments trouvés - Configuration des listeners...');
+// Attendre que le DOM soit complètement chargé
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM chargé - Initialisation drag & drop...');
     
-    // Clic sur la zone pour ouvrir le sélecteur
-    dropZone.addEventListener('click', () => {
-        console.log('🖱️ Clic sur dropZone');
-        fileInput.click();
-    });
+    // Gestion du drag & drop
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
 
-    // Changement de fichier via sélecteur
-    fileInput.addEventListener('change', (e) => {
-        console.log('📁 Fichier sélectionné via input:', e.target.files);
-        if (e.target.files.length > 0) {
+    console.log('dropZone:', dropZone);
+    console.log('fileInput:', fileInput);
+
+    if (dropZone && fileInput) {
+        console.log('✅ Éléments trouvés - Configuration des listeners...');
+        
+        // Clic sur la zone pour ouvrir le sélecteur
+        dropZone.addEventListener('click', () => {
+            console.log('🖱️ Clic sur dropZone');
+            fileInput.click();
+        });
+
+        // Changement de fichier via sélecteur
+        fileInput.addEventListener('change', (e) => {
+            console.log('📁 Fichier sélectionné via input:', e.target.files);
+            if (e.target.files.length > 0) {
             handleFile(e.target.files[0]);
         }
     });
@@ -2276,6 +2282,8 @@ document.getElementById('documentModal').addEventListener('click', function(e) {
         closeDocumentModal();
     }
 });
+
+}); // Fin DOMContentLoaded
 </script>
 
 <?php require 'footer.php'; ?>
