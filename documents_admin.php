@@ -1281,45 +1281,45 @@ document.addEventListener('DOMContentLoaded', function() {
         fileInput.addEventListener('change', (e) => {
             console.log('📁 Fichier sélectionné via input:', e.target.files);
             if (e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Prévenir le comportement par défaut
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
         }
-    });
 
-    // Prévenir le comportement par défaut
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-    });
+        // Effet visuel lors du drag
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.add('drag-over');
+            }, false);
+        });
 
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                dropZone.classList.remove('drag-over');
+            }, false);
+        });
+
+        // Gestion du drop
+        dropZone.addEventListener('drop', (e) => {
+            console.log('📦 Drop détecté!', e.dataTransfer.files);
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFile(files[0]);
+            }
+        }, false);
+    } else {
+        console.error('❌ Éléments non trouvés!', {dropZone, fileInput});
     }
-
-    // Effet visuel lors du drag
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => {
-            dropZone.classList.add('drag-over');
-        }, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, () => {
-            dropZone.classList.remove('drag-over');
-        }, false);
-    });
-
-    // Gestion du drop
-    dropZone.addEventListener('drop', (e) => {
-        console.log('📦 Drop détecté!', e.dataTransfer.files);
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            fileInput.files = files;
-            handleFile(files[0]);
-        }
-    }, false);
-} else {
-    console.error('❌ Éléments non trouvés!', {dropZone, fileInput});
-}
 
     function handleFile(file) {
         console.log('🔧 handleFile appelé:', file.name, file.size);
@@ -1690,33 +1690,25 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             return; // Succès - on arrête ici
                         } else {
-                            console.warn('⚠️ Parser serveur - success=false:', data);
+                            console.warn('⚠️ Analyse serveur - success=false:', data);
                         }
-                        } catch (parseError) {
-                            console.error('❌ Erreur parsing JSON:', parseError);
-                            console.error('Réponse complète:', rawText);
-                        }
-                    } else {
-                        const errorText = await serverResponse.text();
-                        console.error('❌ Erreur serveur HTTP', serverResponse.status, ':', errorText);
-                    }
-                            } catch (parseError) {
-                                console.error('❌ Erreur parsing JSON:', parseError);
-                                console.error('Réponse complète:', rawText);
-                            }
-                        } else {
-                            const errorText = await serverResponse.text();
-                            console.error('❌ Erreur serveur HTTP', serverResponse.status, ':', errorText);
-                        }
-                    } catch (error) {
-                        console.error('❌ Analyse serveur - Exception:', error);
+                    } catch (parseError) {
+                        console.error('❌ Erreur parsing JSON:', parseError);
+                        console.error('Réponse complète:', rawText);
                     }
                 } else {
-                    console.warn('⚠️ PDF.js n\'a pas extrait de texte (PDF protégé ou corrompu)');
+                    const errorText = await serverResponse.text();
+                    console.error('❌ Erreur serveur HTTP', serverResponse.status, ':', errorText);
                 }
+            } catch (error) {
+                console.error('❌ Analyse serveur - Exception:', error);
             }
+        } else {
+            console.warn('⚠️ PDF.js n\'a pas extrait de texte (PDF protégé ou corrompu)');
+        }
+    }
             
-            // MÉTHODE 2: Fichiers non-PDF (TXT, CSV, etc.)
+    // MÉTHODE 2: Fichiers non-PDF (TXT, CSV, etc.)
             let extractedText = '';
             
             if (ext === 'txt' || ext === 'csv' || ext === 'log') {
