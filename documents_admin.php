@@ -1493,71 +1493,115 @@ if (dropZone && fileInput) {
         return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
     }
     
+    // Fonction d'extraction PDF avec PDF.js (pour meilleure compatibilité wkhtmltopdf)
+    async function readPDF(file) {
+        console.log('🔍 Extraction PDF avec PDF.js...');
+        
+        if (typeof pdfjsLib === 'undefined') {
+            console.error('❌ PDF.js non chargé');
+            return '';
+        }
+        
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            console.log('📚 PDF chargé:', pdf.numPages, 'pages');
+            
+            let fullText = '';
+            const numPages = Math.min(pdf.numPages, 10);
+            
+            for (let i = 1; i <= numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+            
+            console.log('✅ PDF.js extraction:', fullText.length, 'caractères');
+            return fullText;
+        } catch (error) {
+            console.error('❌ Erreur PDF.js:', error);
+            return '';
+        }
+    }
+    
     async function readDocumentContent(file) {
         const ext = file.name.split('.').pop().toLowerCase();
         const descInput = document.querySelector('textarea[name="description"]');
         
         try {
-            // MÉTHODE 1: Parser serveur (PRIORITAIRE - Plus fiable pour PDF)
+            // STRATÉGIE HYBRIDE: PDF.js client + analyse serveur
             if (ext === 'pdf') {
-                try {
-                    // Lire le fichier en base64 pour contourner ModSecurity
-                    const reader = new FileReader();
-                    const base64Promise = new Promise((resolve, reject) => {
-                        reader.onload = () => resolve(reader.result.split(',')[1]);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(file);
-                    });
+                console.log('🔄 Traitement PDF...');
+                
+                // ÉTAPE 1: Extraire le texte avec PDF.js (meilleur pour wkhtmltopdf)
+                const extractedText = await readPDF(file);
+                
+                if (extractedText && extractedText.length > 20) {
+                    console.log('✅ Texte extrait, envoi au serveur pour analyse...');
                     
-                    const base64Data = await base64Promise;
-                    
-                    const serverResponse = await fetch('parse_pdf_server.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            pdf_base64: base64Data,
-                            filename: file.name
-                        })
-                    });
-                    
-                    console.log('🔍 Réponse serveur - Status:', serverResponse.status, serverResponse.statusText);
-                    
-                    if (serverResponse.ok) {
-                        // Lire d'abord le texte brut pour debug
-                        const rawText = await serverResponse.text();
-                        console.log('📄 Réponse brute (premiers 500 car):', rawText.substring(0, 500));
+                    // ÉTAPE 2: Envoyer le texte au serveur pour analyse
+                    try {
+                        const serverResponse = await fetch('parse_pdf_server.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                text: extractedText,
+                                filename: file.name
+                            })
+                        });
                         
-                        try {
-                            const data = JSON.parse(rawText);
-                            console.log('📄 Analyse serveur - Données:', data);
-                        
-                            if (data.success) {
-                                console.log('✅ Parser serveur réussi - Méthode:', data.method);
-                            // Pré-remplir la date
-                            if (data.date_iso) {
-                                const dateInput = document.getElementById('document_date');
-                                if (dateInput && !dateInput.value) {
-                                    dateInput.value = data.date_iso;
-                                    dateInput.style.backgroundColor = '#d4edda';
-                                    setTimeout(() => { dateInput.style.backgroundColor = ''; }, 2000);
-                                }
-                            }
+                        if (serverResponse.ok) {
+                            const rawText = await serverResponse.text();
+                            console.log('📄 Réponse serveur:', rawText.substring(0, 300));
                             
-                            // Pré-remplir la description
-                            if (data.supplier && data.amount) {
-                                const desc = `Facture${data.invoice_number ? ' N°' + data.invoice_number : ''} - ${data.supplier}${data.date ? ' du ' + data.date : ''} - ${data.amount}`;
-                                if (descInput && !descInput.value) {
-                                    descInput.value = desc;
-                                    descInput.style.backgroundColor = '#d4edda';
-                                    setTimeout(() => { descInput.style.backgroundColor = ''; }, 3000);
-                                }
-                            }
+                            try {
+                                const data = JSON.parse(rawText);
                             
-                            // Tags automatiques
-                            const tagsInput = document.getElementById('search_tags');
-                            if (tagsInput && data.supplier) {
+                                if (data.success) {
+                                    console.log('✅ Analyse réussie:', data);
+                                    
+                                    // Pré-remplir la date
+                                    if (data.date_iso) {
+                                        const dateInput = document.getElementById('document_date');
+                                        if (dateInput && !dateInput.value) {
+                                            dateInput.value = data.date_iso;
+                                            dateInput.style.backgroundColor = '#d4edda';
+                                            setTimeout(() => { dateInput.style.backgroundColor = ''; }, 2000);
+                                        }
+                                    }
+                                    
+                                    // Pré-remplir le montant
+                                    if (data.amount) {
+                                        const amountInput = document.querySelector('input[name="amount"]');
+                                        if (amountInput && !amountInput.value) {
+                                            amountInput.value = data.amount;
+                                            amountInput.style.backgroundColor = '#d4edda';
+                                            setTimeout(() => { amountInput.style.backgroundColor = ''; }, 2000);
+                                        }
+                                    }
+                                    
+                                    // Pré-remplir la description
+                                    if (data.supplier || data.amount) {
+                                        let desc = 'Facture';
+                                        if (data.invoice_number) desc += ' N°' + data.invoice_number;
+                                        if (data.supplier) desc += ' - ' + data.supplier;
+                                        if (data.date) desc += ' du ' + data.date;
+                                        if (data.amount) desc += ' - ' + data.amount;
+                                        if (data.is_ttc) desc += ' TTC';
+                                        
+                                        if (descInput && !descInput.value) {
+                                            descInput.value = desc;
+                                            descInput.style.backgroundColor = '#d4edda';
+                                            setTimeout(() => { descInput.style.backgroundColor = ''; }, 3000);
+                                        }
+                                    }
+                                    
+                                    // Tags automatiques
+                                    const tagsInput = document.getElementById('search_tags');
+                                    if (tagsInput && data.supplier) {
                                 const currentTags = tagsInput.value.toLowerCase();
                                 const newTag = data.supplier.toLowerCase();
                                 if (!currentTags.includes(newTag)) {
@@ -1594,29 +1638,26 @@ if (dropZone && fileInput) {
                             }
                             
                             return; // Succès - on arrête ici
+                                } else {
+                                    console.warn('⚠️ Analyse serveur - success=false:', data);
+                                }
+                            } catch (parseError) {
+                                console.error('❌ Erreur parsing JSON:', parseError);
+                            }
                         } else {
-                            console.warn('⚠️ Parser serveur - success=false:', data);
+                            console.error('❌ Erreur serveur HTTP', serverResponse.status);
                         }
-                        } catch (parseError) {
-                            console.error('❌ Erreur parsing JSON:', parseError);
-                            console.error('Réponse complète:', rawText);
-                        }
-                    } else {
-                        const errorText = await serverResponse.text();
-                        console.error('❌ Erreur serveur HTTP', serverResponse.status, ':', errorText);
+                    } catch (error) {
+                        console.error('❌ Erreur analyse serveur:', error);
                     }
-                } catch (error) {
-                    console.error('❌ Parser serveur - Exception:', error);
+                } else {
+                    console.warn('⚠️ PDF.js n\'a pas extrait de texte');
                 }
             }
             
-            // MÉTHODE 2: Fallback client-side
+            // MÉTHODE 2: Fichiers non-PDF (TXT, CSV, etc.)
             let extractedText = '';
-            
-            if (ext === 'pdf') {
-                // Lire le PDF côté client (fallback)
-                extractedText = await readPDF(file);
-            } else if (['txt', 'csv', 'log'].includes(ext)) {
+            if (ext === 'txt' || ext === 'csv' || ext === 'log') {
                 // Lire les fichiers texte
                 extractedText = await readTextFile(file);
             } else if (['doc', 'docx'].includes(ext)) {
