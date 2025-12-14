@@ -59,7 +59,7 @@ class DocumentParser {
             }
         }
         
-        // Méthode 2 : PdfParser library (PHP pur)
+        // Méthode 2: PdfParser library (PHP pur)
         if (class_exists('Smalot\PdfParser\Parser')) {
             try {
                 $parser = new \Smalot\PdfParser\Parser();
@@ -80,15 +80,79 @@ class DocumentParser {
             }
         }
         
-        // Méthode 3 : Extraction brute (fallback sans dépendances)
+        // Méthode 3 : Extraction avec décompression FlateDecode
+        $text = $this->extractWithDecompression();
+        if (!empty($text)) {
+            $this->extracted_text = $text;
+            return true;
+        }
+        
+        // Méthode 4 : Extraction brute (fallback sans dépendances)
         $text = $this->extractRawPDFText();
         if (!empty($text)) {
             $this->extracted_text = $text;
             return true;
         }
         
-        // Méthode 4 : Convertir en images puis OCR
+        // Méthode 5 : Convertir en images puis OCR
         return $this->parsePDFAsImages();
+    }
+    
+    /**
+     * Extraction PDF avec décompression des streams FlateDecode
+     */
+    private function extractWithDecompression() {
+        $content = @file_get_contents($this->file_path);
+        if ($content === false || strlen($content) < 100) {
+            return '';
+        }
+        
+        $text = '';
+        
+        // Trouver tous les streams compressés avec FlateDecode
+        preg_match_all('/stream\s*\n(.*?)\nendstream/s', $content, $streams);
+        
+        foreach ($streams[1] as $stream) {
+            // Essayer de décompresser avec zlib
+            if (function_exists('gzuncompress')) {
+                $decompressed = @gzuncompress($stream);
+                if ($decompressed !== false) {
+                    // Extraire le texte du stream décompressé
+                    if (preg_match_all('/\(([^\)]+)\)\s*Tj/s', $decompressed, $matches)) {
+                        foreach ($matches[1] as $match) {
+                            $decoded = $this->decodePDFString($match);
+                            $text .= $decoded . ' ';
+                        }
+                    }
+                    // Aussi chercher dans les tableaux de texte
+                    if (preg_match_all('/\[\s*\(([^\)]+)\)\s*\]/s', $decompressed, $matches)) {
+                        foreach ($matches[1] as $match) {
+                            $decoded = $this->decodePDFString($match);
+                            $text .= $decoded . ' ';
+                        }
+                    }
+                }
+            }
+            
+            // Essayer aussi avec gzinflate
+            if (function_exists('gzinflate') && empty($text)) {
+                $decompressed = @gzinflate($stream);
+                if ($decompressed !== false) {
+                    if (preg_match_all('/\(([^\)]+)\)\s*Tj/s', $decompressed, $matches)) {
+                        foreach ($matches[1] as $match) {
+                            $decoded = $this->decodePDFString($match);
+                            $text .= $decoded . ' ';
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Nettoyer
+        $text = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/', '', $text);
+        $text = preg_replace('/\s+/', ' ', $text);
+        
+        return trim($text);
     }
     
     /**
