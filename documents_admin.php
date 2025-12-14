@@ -1252,20 +1252,28 @@ table tr:hover {
 
 <script>
 // Gestion du drag & drop
+console.log('🚀 Initialisation drag & drop...');
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
 const fileInfo = document.getElementById('fileInfo');
 const fileName = document.getElementById('fileName');
 const fileSize = document.getElementById('fileSize');
 
+console.log('dropZone:', dropZone);
+console.log('fileInput:', fileInput);
+
 if (dropZone && fileInput) {
+    console.log('✅ Éléments trouvés - Configuration des listeners...');
+    
     // Clic sur la zone pour ouvrir le sélecteur
     dropZone.addEventListener('click', () => {
+        console.log('🖱️ Clic sur dropZone');
         fileInput.click();
     });
 
     // Changement de fichier via sélecteur
     fileInput.addEventListener('change', (e) => {
+        console.log('📁 Fichier sélectionné via input:', e.target.files);
         if (e.target.files.length > 0) {
             handleFile(e.target.files[0]);
         }
@@ -1296,14 +1304,19 @@ if (dropZone && fileInput) {
 
     // Gestion du drop
     dropZone.addEventListener('drop', (e) => {
+        console.log('📦 Drop détecté!', e.dataTransfer.files);
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             fileInput.files = files;
             handleFile(files[0]);
         }
     }, false);
+} else {
+    console.error('❌ Éléments non trouvés!', {dropZone, fileInput});
+}
 
     function handleFile(file) {
+        console.log('🔧 handleFile appelé:', file.name, file.size);
         fileName.textContent = '📄 ' + file.name;
         fileSize.textContent = formatFileSize(file.size);
         fileInfo.classList.add('active');
@@ -1482,6 +1495,45 @@ if (dropZone && fileInput) {
                 analysisMsg.style.opacity = '0';
                 setTimeout(() => analysisMsg.remove(), 500);
             }, 4000);
+        }
+    }
+
+    // Fonction de lecture PDF avec PDF.js (DOIT être définie AVANT readDocumentContent)
+    async function readPDF(file) {
+        console.log('🔍 Tentative lecture PDF avec PDF.js...');
+        
+        if (typeof pdfjsLib === 'undefined') {
+            console.error('❌ PDF.js non chargé');
+            return '';
+        }
+        
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            console.log('📄 ArrayBuffer créé:', arrayBuffer.byteLength, 'bytes');
+            
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            console.log('📚 PDF chargé:', pdf.numPages, 'pages');
+            
+            let fullText = '';
+            // Lire jusqu'à 10 pages pour meilleure détection
+            const numPages = Math.min(pdf.numPages, 10);
+            
+            for (let i = 1; i <= numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                // Conserver la structure avec espaces et retours à la ligne
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+                console.log(`📄 Page ${i}: ${pageText.length} caractères extraits`);
+            }
+            
+            console.log('✅ Extraction PDF.js réussie:', fullText.length, 'caractères');
+            console.log('📄 Aperçu:', fullText.substring(0, 200));
+            
+            return fullText;
+        } catch (error) {
+            console.error('❌ Erreur lecture PDF:', error);
+            return '';
         }
     }
 
@@ -1733,44 +1785,6 @@ if (dropZone && fileInput) {
             }
         } catch (error) {
             console.log('Erreur lecture document:', error);
-        }
-    }
-    
-    async function readPDF(file) {
-        console.log('🔍 Tentative lecture PDF avec PDF.js...');
-        
-        if (typeof pdfjsLib === 'undefined') {
-            console.error('❌ PDF.js non chargé');
-            return '';
-        }
-        
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            console.log('📄 ArrayBuffer créé:', arrayBuffer.byteLength, 'bytes');
-            
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            console.log('📚 PDF chargé:', pdf.numPages, 'pages');
-            
-            let fullText = '';
-            // Lire jusqu'à 10 pages pour meilleure détection
-            const numPages = Math.min(pdf.numPages, 10);
-            
-            for (let i = 1; i <= numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                // Conserver la structure avec espaces et retours à la ligne
-                const pageText = textContent.items.map(item => item.str).join(' ');
-                fullText += pageText + '\n';
-                console.log(`📄 Page ${i}: ${pageText.length} caractères extraits`);
-            }
-            
-            console.log('✅ Extraction PDF.js réussie:', fullText.length, 'caractères');
-            console.log('📄 Aperçu:', fullText.substring(0, 200));
-            
-            return fullText;
-        } catch (error) {
-            console.error('❌ Erreur lecture PDF:', error);
-            return '';
         }
     }
     
