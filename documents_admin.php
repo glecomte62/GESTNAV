@@ -900,7 +900,7 @@ table tr:hover {
 
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea name="description" class="form-control" rows="3"></textarea>
+                    <textarea id="description" name="description" class="form-control" rows="3"></textarea>
                 </div>
 
                 <?php if ($has_machine_support): ?>
@@ -1531,29 +1531,67 @@ if (dropZone && fileInput) {
                         
                         try {
                             const data = JSON.parse(rawText);
-                            console.log('📄 Analyse serveur - Données:', data);
+                            console.log('📄 Analyse serveur - Données complètes:', data);
                         
                             if (data.success) {
                                 console.log('✅ Parser serveur réussi - Méthode:', data.method);
-                            // Pré-remplir la date
-                            if (data.date_iso) {
-                                const dateInput = document.getElementById('document_date');
-                                if (dateInput && !dateInput.value) {
-                                    dateInput.value = data.date_iso;
-                                    dateInput.style.backgroundColor = '#d4edda';
-                                    setTimeout(() => { dateInput.style.backgroundColor = ''; }, 2000);
+                                
+                                // Pré-remplir la date (priorité à date_iso)
+                                if (data.date_iso) {
+                                    const dateInput = document.getElementById('document_date');
+                                    if (dateInput && !dateInput.value) {
+                                        dateInput.value = data.date_iso;
+                                        dateInput.style.backgroundColor = '#d4edda';
+                                        setTimeout(() => { dateInput.style.backgroundColor = ''; }, 2000);
+                                        console.log('✅ Date remplie:', data.date_iso);
+                                    }
                                 }
-                            }
-                            
-                            // Pré-remplir la description
-                            if (data.supplier && data.amount) {
-                                const desc = `Facture${data.invoice_number ? ' N°' + data.invoice_number : ''} - ${data.supplier}${data.date ? ' du ' + data.date : ''} - ${data.amount}`;
+                                
+                                // Pré-remplir la description avec les infos extraites
+                                const descInput = document.getElementById('description');
                                 if (descInput && !descInput.value) {
-                                    descInput.value = desc;
-                                    descInput.style.backgroundColor = '#d4edda';
-                                    setTimeout(() => { descInput.style.backgroundColor = ''; }, 3000);
+                                    let descParts = [];
+                                    
+                                    // Type de document
+                                    if (data.supplier) {
+                                        descParts.push('Facture');
+                                        if (data.invoice_number) {
+                                            descParts.push('N°' + data.invoice_number);
+                                        }
+                                        descParts.push('-', data.supplier);
+                                    }
+                                    
+                                    // Date
+                                    if (data.date || data.date_iso) {
+                                        const dateStr = data.date || data.date_iso;
+                                        descParts.push('du', dateStr);
+                                    }
+                                    
+                                    // Montant (avec indication si TTC)
+                                    if (data.amount) {
+                                        descParts.push('-', data.amount);
+                                        if (data.is_ttc) {
+                                            descParts.push('TTC');
+                                        }
+                                    }
+                                    
+                                    if (descParts.length > 0) {
+                                        descInput.value = descParts.join(' ');
+                                        descInput.style.backgroundColor = '#d4edda';
+                                        setTimeout(() => { descInput.style.backgroundColor = ''; }, 3000);
+                                        console.log('✅ Description remplie:', descInput.value);
+                                    }
                                 }
-                            }
+                                
+                                // Afficher les métadonnées extraites pour debug
+                                if (data.metadata) {
+                                    console.log('📊 Métadonnées extraites:', {
+                                        dates: data.metadata.dates,
+                                        amounts: data.metadata.amounts,
+                                        total_amount: data.metadata.total_amount,
+                                        is_ttc: data.metadata.is_ttc
+                                    });
+                                }
                             
                             // Tags automatiques
                             const tagsInput = document.getElementById('search_tags');
@@ -1567,7 +1605,7 @@ if (dropZone && fileInput) {
                             
                             // Catégorie automatique
                             if (data.supplier) {
-                                const categorySelect = document.getElementById('category_id');
+                                const categorySelect = document.querySelector('select[name="category_id"]');
                                 if (categorySelect) {
                                     const supplierLower = data.supplier.toLowerCase();
                                     let categoryValue = null;
