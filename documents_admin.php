@@ -733,20 +733,17 @@ table tr:hover {
     font-size: 4rem;
     color: #004b8d;
     margin-bottom: 15px;
-    pointer-events: none;
 }
 
 .drag-drop-zone .text {
     font-size: 1.1rem;
     color: #333;
     margin-bottom: 10px;
-    pointer-events: none;
 }
 
 .drag-drop-zone .subtext {
     font-size: 0.9rem;
     color: #666;
-    pointer-events: none;
 }
 
 .file-info {
@@ -1254,75 +1251,59 @@ table tr:hover {
 </div>
 
 <script>
-// Attendre que le DOM soit complètement chargé
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM chargé - Initialisation drag & drop...');
-    
-    // Gestion du drag & drop
-    const dropZone = document.getElementById('dropZone');
-    const fileInput = document.getElementById('fileInput');
-    const fileInfo = document.getElementById('fileInfo');
-    const fileName = document.getElementById('fileName');
-    const fileSize = document.getElementById('fileSize');
+// Gestion du drag & drop
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileInfo = document.getElementById('fileInfo');
+const fileName = document.getElementById('fileName');
+const fileSize = document.getElementById('fileSize');
 
-    console.log('dropZone:', dropZone);
-    console.log('fileInput:', fileInput);
+if (dropZone && fileInput) {
+    // Clic sur la zone pour ouvrir le sélecteur
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
 
-    if (dropZone && fileInput) {
-        console.log('✅ Éléments trouvés - Configuration des listeners...');
-        
-        // Clic sur la zone pour ouvrir le sélecteur
-        dropZone.addEventListener('click', () => {
-            console.log('🖱️ Clic sur dropZone');
-            fileInput.click();
-        });
-
-        // Changement de fichier via sélecteur
-        fileInput.addEventListener('change', (e) => {
-            console.log('📁 Fichier sélectionné via input:', e.target.files);
-            if (e.target.files.length > 0) {
-                handleFile(e.target.files[0]);
-            }
-        });
-
-        // Prévenir le comportement par défaut
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
+    // Changement de fichier via sélecteur
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFile(e.target.files[0]);
         }
+    });
 
-        // Effet visuel lors du drag
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => {
-                dropZone.classList.add('drag-over');
-            }, false);
-        });
+    // Prévenir le comportement par défaut
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+    });
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, () => {
-                dropZone.classList.remove('drag-over');
-            }, false);
-        });
-
-        // Gestion du drop
-        dropZone.addEventListener('drop', (e) => {
-            console.log('📦 Drop détecté!', e.dataTransfer.files);
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                handleFile(files[0]);
-            }
-        }, false);
-    } else {
-        console.error('❌ Éléments non trouvés!', {dropZone, fileInput});
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
     }
 
+    // Effet visuel lors du drag
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.add('drag-over');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+            dropZone.classList.remove('drag-over');
+        }, false);
+    });
+
+    // Gestion du drop
+    dropZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFile(files[0]);
+        }
+    }, false);
+
     function handleFile(file) {
-        console.log('🔧 handleFile appelé:', file.name, file.size);
         fileName.textContent = '📄 ' + file.name;
         fileSize.textContent = formatFileSize(file.size);
         fileInfo.classList.add('active');
@@ -1504,45 +1485,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Fonction de lecture PDF avec PDF.js (DOIT être définie AVANT readDocumentContent)
-    async function readPDF(file) {
-        console.log('🔍 Tentative lecture PDF avec PDF.js...');
-        
-        if (typeof pdfjsLib === 'undefined') {
-            console.error('❌ PDF.js non chargé');
-            return '';
-        }
-        
-        try {
-            const arrayBuffer = await file.arrayBuffer();
-            console.log('📄 ArrayBuffer créé:', arrayBuffer.byteLength, 'bytes');
-            
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            console.log('📚 PDF chargé:', pdf.numPages, 'pages');
-            
-            let fullText = '';
-            // Lire jusqu'à 10 pages pour meilleure détection
-            const numPages = Math.min(pdf.numPages, 10);
-            
-            for (let i = 1; i <= numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                // Conserver la structure avec espaces et retours à la ligne
-                const pageText = textContent.items.map(item => item.str).join(' ');
-                fullText += pageText + '\n';
-                console.log(`📄 Page ${i}: ${pageText.length} caractères extraits`);
-            }
-            
-            console.log('✅ Extraction PDF.js réussie:', fullText.length, 'caractères');
-            console.log('📄 Aperçu:', fullText.substring(0, 200));
-            
-            return fullText;
-        } catch (error) {
-            console.error('❌ Erreur lecture PDF:', error);
-            return '';
-        }
-    }
-
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -1690,25 +1632,33 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             return; // Succès - on arrête ici
                         } else {
-                            console.warn('⚠️ Analyse serveur - success=false:', data);
+                            console.warn('⚠️ Parser serveur - success=false:', data);
                         }
-                    } catch (parseError) {
-                        console.error('❌ Erreur parsing JSON:', parseError);
-                        console.error('Réponse complète:', rawText);
+                        } catch (parseError) {
+                            console.error('❌ Erreur parsing JSON:', parseError);
+                            console.error('Réponse complète:', rawText);
+                        }
+                    } else {
+                        const errorText = await serverResponse.text();
+                        console.error('❌ Erreur serveur HTTP', serverResponse.status, ':', errorText);
+                    }
+                            } catch (parseError) {
+                                console.error('❌ Erreur parsing JSON:', parseError);
+                                console.error('Réponse complète:', rawText);
+                            }
+                        } else {
+                            const errorText = await serverResponse.text();
+                            console.error('❌ Erreur serveur HTTP', serverResponse.status, ':', errorText);
+                        }
+                    } catch (error) {
+                        console.error('❌ Analyse serveur - Exception:', error);
                     }
                 } else {
-                    const errorText = await serverResponse.text();
-                    console.error('❌ Erreur serveur HTTP', serverResponse.status, ':', errorText);
+                    console.warn('⚠️ PDF.js n\'a pas extrait de texte (PDF protégé ou corrompu)');
                 }
-            } catch (error) {
-                console.error('❌ Analyse serveur - Exception:', error);
             }
-        } else {
-            console.warn('⚠️ PDF.js n\'a pas extrait de texte (PDF protégé ou corrompu)');
-        }
-    }
             
-    // MÉTHODE 2: Fichiers non-PDF (TXT, CSV, etc.)
+            // MÉTHODE 2: Fichiers non-PDF (TXT, CSV, etc.)
             let extractedText = '';
             
             if (ext === 'txt' || ext === 'csv' || ext === 'log') {
@@ -1783,6 +1733,44 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         } catch (error) {
             console.log('Erreur lecture document:', error);
+        }
+    }
+    
+    async function readPDF(file) {
+        console.log('🔍 Tentative lecture PDF avec PDF.js...');
+        
+        if (typeof pdfjsLib === 'undefined') {
+            console.error('❌ PDF.js non chargé');
+            return '';
+        }
+        
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            console.log('📄 ArrayBuffer créé:', arrayBuffer.byteLength, 'bytes');
+            
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            console.log('📚 PDF chargé:', pdf.numPages, 'pages');
+            
+            let fullText = '';
+            // Lire jusqu'à 10 pages pour meilleure détection
+            const numPages = Math.min(pdf.numPages, 10);
+            
+            for (let i = 1; i <= numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                // Conserver la structure avec espaces et retours à la ligne
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+                console.log(`📄 Page ${i}: ${pageText.length} caractères extraits`);
+            }
+            
+            console.log('✅ Extraction PDF.js réussie:', fullText.length, 'caractères');
+            console.log('📄 Aperçu:', fullText.substring(0, 200));
+            
+            return fullText;
+        } catch (error) {
+            console.error('❌ Erreur lecture PDF:', error);
+            return '';
         }
     }
     
@@ -2274,8 +2262,6 @@ document.getElementById('documentModal').addEventListener('click', function(e) {
         closeDocumentModal();
     }
 });
-
-}); // Fin DOMContentLoaded
 </script>
 
 <?php require 'footer.php'; ?>
