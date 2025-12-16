@@ -1,4 +1,8 @@
 <?php
+// Vider le cache OpCache (temporaire pour debug)
+if (function_exists('opcache_invalidate')) {
+    opcache_invalidate(__FILE__, true);
+}
 require_once 'config.php';
 require_once 'auth.php';
 require_login();
@@ -1137,6 +1141,16 @@ require 'header.php'; ?>
         border-color: #00a0c6;
         box-shadow: 0 0 0 2px rgba(0,160,198,0.2);
     }
+    /* Couleurs pour les options dans les dropdowns d'affectation */
+    .option-priority {
+        background-color: #fde8e8 !important;
+        color: #b00020 !important;
+        font-weight: 600;
+    }
+    .option-previous {
+        background-color: #e3f2fd !important;
+        color: #0277bd !important;
+    }
     .form-footer {
         margin-top: 1rem;
         text-align: right;
@@ -1204,14 +1218,13 @@ require 'header.php'; ?>
                     <tr>
                         <td>
                             <strong><?= htmlspecialchars(trim(($p['u_prenom'] ?? '').' '.($p['u_nom'] ?? ''))) ?></strong>
-                            <?php if ($wasInPrevious): ?>
-                                <span class="badge-pill" style="background:#e3f2fd;color:#0277bd;border:1px solid #90caf9; margin-left:.4rem;" title="Était inscrit à la précédente sortie">📅 Précédente sortie</span>
-                            <?php endif; ?>
                             <?php if ($isPriority): ?>
-                                <span class="badge-pill" style="background:#fde8e8;color:#b00020;border:1px solid #f5b5b5; margin-left:.4rem;" title="Prioritaire sur la prochaine sortie">🎯 PRIORITAIRE</span>
+                                <span class="badge-pill" style="background:#fde8e8;color:#b00020;border:1px solid #f5b5b5; margin-left:.4rem;" title="Prioritaire sur la prochaine sortie (était inscrit à la précédente)">🎯 PRIORITAIRE</span>
                                 <?php if ($isInscritNext): ?>
                                     <span class="badge-pill" style="background:#e7f7ec;color:#166534;border:1px solid #bbf7d0; margin-left:.4rem;" title="Inscrit à la prochaine sortie">✅ Inscrit prochaine</span>
                                 <?php endif; ?>
+                            <?php elseif ($wasInPrevious): ?>
+                                <span class="badge-pill" style="background:#e3f2fd;color:#0277bd;border:1px solid #90caf9; margin-left:.4rem;" title="Était inscrit à la précédente sortie">📅 Précédente sortie</span>
                             <?php endif; ?>
                             <div style="color:#666;font-size:.85rem;"><?= htmlspecialchars($p['u_email'] ?? '') ?></div>
                         </td>
@@ -1479,11 +1492,10 @@ require 'header.php'; ?>
                         <div>
                             <div class="inscrit-name">
                                 <?= htmlspecialchars($i['prenom'] . ' ' . $i['nom']) ?>
-                                <?php if ($wasInPrevious): ?>
-                                    <span class="badge-pill" style="background:#e3f2fd;color:#0277bd;border:1px solid #90caf9; margin-left:.4rem;" title="Était inscrit à la précédente sortie">📅 Précédente sortie</span>
-                                <?php endif; ?>
                                 <?php if ($isPriority): ?>
-                                    <span class="badge-pill" style="background:#fde8e8;color:#b00020;border:1px solid #f5b5b5; margin-left:.4rem;" title="Prioritaire sur la prochaine sortie">PRIORITAIRE</span>
+                                    <span class="badge-pill" style="background:#fde8e8;color:#b00020;border:1px solid #f5b5b5; margin-left:.4rem;" title="Prioritaire sur la prochaine sortie (était inscrit à la précédente)">PRIORITAIRE</span>
+                                <?php elseif ($wasInPrevious): ?>
+                                    <span class="badge-pill" style="background:#e3f2fd;color:#0277bd;border:1px solid #90caf9; margin-left:.4rem;" title="Était inscrit à la précédente sortie">📅 Précédente sortie</span>
                                 <?php endif; ?>
                             </div>
                             <div class="inscrit-email">
@@ -1813,9 +1825,25 @@ require 'header.php'; ?>
                                     <select name="assign[<?= $smid ?>][]" class="person-select" data-machine="<?= $smid ?>" data-slot="1">
                                         <option value="">— Aucune —</option>
                                         <?php foreach ($inscrits as $i): ?>
-                                            <option value="<?= (int)$i['user_id'] ?>" data-user-id="<?= (int)$i['user_id'] ?>"
+                                            <?php
+                                                // Vérifier le statut de cette personne
+                                                $isPrio = false;
+                                                $wasPrev = false;
+                                                try {
+                                                    $stP = $pdo->prepare('SELECT active FROM sortie_priorites WHERE user_id = ?');
+                                                    $stP->execute([(int)$i['user_id']]);
+                                                    $isPrio = (bool)($stP->fetchColumn() ?? 0);
+                                                    if (!$isPrio && $previous_sortie) {
+                                                        $stPrev = $pdo->prepare('SELECT COUNT(*) FROM sortie_inscriptions WHERE sortie_id = ? AND user_id = ?');
+                                                        $stPrev->execute([$previous_sortie['id'], (int)$i['user_id']]);
+                                                        $wasPrev = (bool)$stPrev->fetchColumn();
+                                                    }
+                                                } catch (Throwable $e) {}
+                                                $optionClass = $isPrio ? 'option-priority' : ($wasPrev ? 'option-previous' : '');
+                                            ?>
+                                            <option value="<?= (int)$i['user_id'] ?>" data-user-id="<?= (int)$i['user_id'] ?>" class="<?= $optionClass ?>"
                                                 <?= $user1 === (int)$i['user_id'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($i['prenom'] . ' ' . $i['nom']) ?>
+                                                <?= htmlspecialchars($i['prenom'] . ' ' . $i['nom']) ?><?= $isPrio ? ' 🎯' : ($wasPrev ? ' 📅' : '') ?>
                                             </option>
                                         <?php endforeach; ?>
                                     </select>
@@ -1825,8 +1853,24 @@ require 'header.php'; ?>
                                     <select name="assign[<?= $smid ?>][]" class="person-select" data-machine="<?= $smid ?>" data-slot="2">
                                         <option value="">— Aucune —</option>
                                         <?php foreach ($inscrits as $i): ?>
-                                            <option value="<?= (int)$i['user_id'] ?>" data-user-id="<?= (int)$i['user_id'] ?>" <?= $user2 === (int)$i['user_id'] ? 'selected' : '' ?>>
-                                                <?= htmlspecialchars($i['prenom'] . ' ' . $i['nom']) ?>
+                                            <?php
+                                                // Vérifier le statut de cette personne
+                                                $isPrio = false;
+                                                $wasPrev = false;
+                                                try {
+                                                    $stP = $pdo->prepare('SELECT active FROM sortie_priorites WHERE user_id = ?');
+                                                    $stP->execute([(int)$i['user_id']]);
+                                                    $isPrio = (bool)($stP->fetchColumn() ?? 0);
+                                                    if (!$isPrio && $previous_sortie) {
+                                                        $stPrev = $pdo->prepare('SELECT COUNT(*) FROM sortie_inscriptions WHERE sortie_id = ? AND user_id = ?');
+                                                        $stPrev->execute([$previous_sortie['id'], (int)$i['user_id']]);
+                                                        $wasPrev = (bool)$stPrev->fetchColumn();
+                                                    }
+                                                } catch (Throwable $e) {}
+                                                $optionClass = $isPrio ? 'option-priority' : ($wasPrev ? 'option-previous' : '');
+                                            ?>
+                                            <option value="<?= (int)$i['user_id'] ?>" data-user-id="<?= (int)$i['user_id'] ?>" class="<?= $optionClass ?>" <?= $user2 === (int)$i['user_id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($i['prenom'] . ' ' . $i['nom']) ?><?= $isPrio ? ' 🎯' : ($wasPrev ? ' 📅' : '') ?>
                                             </option>
                                         <?php endforeach; ?>
                                         <option value="GUEST" <?= ($user2 ? '' : (isset($existing_guests[$smid]) ? 'selected' : '')) ?>>INVITÉ</option>

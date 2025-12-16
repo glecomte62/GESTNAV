@@ -47,13 +47,49 @@ try {
         $recipients = [];
     }
     
+    // Si pas de destinataires dans la table dédiée, essayer de récupérer depuis le champ recipients de email_logs
+    if (empty($recipients) && !empty($email['recipients'])) {
+        // Le champ recipients peut contenir soit une liste d'emails séparés par virgule, soit du JSON
+        $recipientsData = $email['recipients'];
+        if (is_string($recipientsData)) {
+            // Essayer de décoder si c'est du JSON
+            $decoded = json_decode($recipientsData, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                // C'est du JSON
+                foreach ($decoded as $r) {
+                    if (is_array($r) && isset($r['email'])) {
+                        $recipients[] = [
+                            'name' => $r['name'] ?? $r['email'],
+                            'email' => $r['email']
+                        ];
+                    }
+                }
+            } else {
+                // C'est probablement une liste d'emails séparés par virgule
+                $emails = array_filter(array_map('trim', explode(',', $recipientsData)));
+                foreach ($emails as $emailAddr) {
+                    $recipients[] = [
+                        'name' => $emailAddr,
+                        'email' => $emailAddr
+                    ];
+                }
+            }
+        }
+    }
+    
+    // Compter les destinataires
+    $recipientCount = count($recipients);
+    if ($recipientCount === 0 && !empty($email['recipient_count'])) {
+        $recipientCount = (int)$email['recipient_count'];
+    }
+    
     // Préparer les données pour le frontend
     $response = [
         'id' => $email['id'],
         'subject' => $email['subject'],
         'message' => $email['message'] ?? '',
         'sender' => trim($email['prenom'] . ' ' . $email['nom']),
-        'recipient_count' => (int)$email['recipient_count'],
+        'recipient_count' => $recipientCount,
         'recipients' => $recipients,
         'created_at' => $email['created_at']
     ];

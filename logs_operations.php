@@ -74,7 +74,7 @@ include 'header.php';
         <table class="table table-sm align-middle mb-0">
             <thead>
                 <tr>
-                    <th>Date</th>
+                    <th style="min-width: 150px;">Date</th>
                     <th>Nom</th>
                     <th>Prénom</th>
                     <th>Email</th>
@@ -86,7 +86,7 @@ include 'header.php';
             <tbody>
             <?php foreach ($rows as $r): ?>
                 <tr>
-                    <td><?= htmlspecialchars($r['created_at']) ?></td>
+                    <td style="white-space: nowrap;"><?= htmlspecialchars($r['created_at']) ?></td>
                     <td><?= htmlspecialchars($r['nom']) ?></td>
                     <td><?= htmlspecialchars($r['prenom']) ?></td>
                     <td><?= htmlspecialchars($r['email'] ?? '') ?></td>

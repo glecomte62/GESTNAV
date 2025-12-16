@@ -18,7 +18,10 @@ try {
     $totalEmails = (int)$totalStmt->fetchColumn();
     
     // Récupérer les logs avec infos utilisateur
-    $query = "SELECT el.*, u.nom, u.prenom 
+    $query = "SELECT el.*, u.nom, u.prenom,
+              COALESCE(el.recipient_count, (
+                  SELECT COUNT(*) FROM email_recipients er WHERE er.email_log_id = el.id
+              ), 0) as recipient_count
               FROM email_logs el
               LEFT JOIN users u ON u.id = el.sender_id
               ORDER BY el.created_at DESC 
