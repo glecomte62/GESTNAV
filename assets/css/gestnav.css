@@ -4,11 +4,11 @@
     --gn-primary: #003a64;     /* bleu foncé aviation */
     --gn-primary-light: #0a548b;
     --gn-accent: #f0a500;      /* rappel soleil/orange */
-    --gn-bg: #f4f6fb;
-    --gn-text: #1f2933;
-    --gn-muted: #6b7280;
+    --gn-bg: #ffffff;
+    --gn-text: #1a202c;
+    --gn-muted: #4a5568;
     --gn-card-bg: #ffffff;
-    --gn-border: #e5e7eb;
+    --gn-border: #cbd5e0;
 }
 
 *,
@@ -19,7 +19,7 @@
 
 body {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: radial-gradient(circle at top, #e2f0ff 0, #f4f6fb 45%, #eef1f7 100%);
+    background: linear-gradient(180deg, #f0f4f8 0%, #e2e8f0 100%);
     color: var(--gn-text);
     min-height: 100vh;
     margin: 0;
@@ -197,7 +197,9 @@ body {
 
 .gn-card {
     background: var(--gn-card-bg);
+    border: 1px solid var(--gn-border);
     border-radius: 1.1rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
     border: 1px solid var(--gn-border);
     box-shadow: 0 10px 30px rgba(15,23,42,0.06);
     padding: 1.25rem 1.4rem;

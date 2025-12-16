@@ -9,7 +9,7 @@ $clubEmail = defined('CLUB_EMAIL_FROM') ? CLUB_EMAIL_FROM : (function_exists('ge
 $clubPhone = defined('CLUB_PHONE') ? CLUB_PHONE : (function_exists('get_club_setting') ? get_club_setting('club_phone', '') : '');
 $logoPath = defined('CLUB_LOGO_PATH') ? CLUB_LOGO_PATH : (function_exists('get_club_setting') ? get_club_setting('club_logo_path', 'assets/img/logo.png') : 'assets/img/logo.png');
 $logoHeight = defined('CLUB_LOGO_HEIGHT') ? CLUB_LOGO_HEIGHT : (function_exists('get_club_setting') ? get_club_setting('club_logo_height', 48) : 48);
-$version = defined('GESTNAV_VERSION') ? GESTNAV_VERSION : '2.2.0';
+$version = GESTNAV_VERSION;
 ?>
 
 <footer class="gn-footer" style="background: linear-gradient(90deg, #003a64 0%, #0a548b 100%); padding: 2rem 1rem; border-top: 3px solid #00a0c6;">
