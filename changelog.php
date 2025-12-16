@@ -145,6 +145,41 @@ require_login();
     <h1 class="changelog-title">Historique</h1>
     <p class="changelog-subtitle">Suivi des mises a jour de GESTNAV ULM</p>
 
+    <!-- Version 2.4.1 -->
+    <div class="changelog-version-block">
+        <div class="changelog-version-header">
+            <span class="version-number">[2.4.1]</span>
+            <span class="version-date">2025-12-16</span>
+        </div>
+
+        <div class="changelog-section-fixed">
+            <h3 class="changelog-section-type">Fixed</h3>
+            <ul class="changelog-items">
+                <li><strong>Badges participants</strong>: Correction de l'affichage des badges pour refléter correctement le statut de chaque participant.</li>
+                <li>Badge "Précédente sortie" : s'affiche pour les participants qui étaient affectés (ont volé) lors de la sortie précédente.</li>
+                <li>Badge "PRIORITAIRE" : s'affiche pour les participants qui étaient inscrits mais non affectés (recalés) lors de la sortie précédente.</li>
+                <li><strong>Logique exclusive des badges</strong>: Un participant ne peut plus afficher simultanément le badge PRIORITAIRE et le badge Précédente sortie.</li>
+                <li>Le badge PRIORITAIRE prend la priorité d'affichage si les deux conditions sont remplies.</li>
+                <li><strong>Historique emails - Compteur destinataires</strong>: Affichage correct du nombre de destinataires pour tous les emails envoyés.</li>
+                <li>Utilisation de COALESCE avec sous-requête pour compter les destinataires depuis la table <code>email_recipients</code> en complément de la colonne <code>recipient_count</code>.</li>
+                <li><strong>Détails email - Liste destinataires</strong>: Extraction des destinataires depuis plusieurs sources (table dédiée, champ JSON, champ CSV).</li>
+                <li>Gestion des formats multiples pour assurer l'affichage même pour les anciens emails.</li>
+                <li><strong>Logs opérations - Colonne Date</strong>: Largeur minimale de 150px appliquée à la colonne Date pour éviter la troncature.</li>
+                <li>Ajout de <code>white-space: nowrap</code> pour empêcher le retour à la ligne des dates.</li>
+            </ul>
+        </div>
+
+        <div class="changelog-section-changed">
+            <h3 class="changelog-section-type">Changed</h3>
+            <ul class="changelog-items">
+                <li><strong>Interface d'affectation</strong>: Ajout de codes couleur dans les dropdowns de sélection des participants.</li>
+                <li>Fond rouge clair (<code>#fde8e8</code>) pour les participants prioritaires avec emoji 🎯.</li>
+                <li>Fond bleu clair (<code>#e3f2fd</code>) pour les participants inscrits à la sortie précédente avec emoji 📅.</li>
+                <li>Amélioration visuelle de l'identification rapide du statut des participants lors des affectations.</li>
+            </ul>
+        </div>
+    </div>
+
     <!-- Version 2.4.0 -->
     <div class="changelog-version-block">
         <div class="changelog-version-header">

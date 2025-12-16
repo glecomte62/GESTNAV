@@ -7,6 +7,8 @@ require_admin();
 header('Content-Type: application/json');
 
 try {
+    $selectedVersion = $_GET['version'] ?? '';
+    
     // Lire le fichier changelog.php
     $changelogPath = __DIR__ . '/changelog.php';
     if (!file_exists($changelogPath)) {
@@ -16,8 +18,52 @@ try {
     
     $changelogContent = file_get_contents($changelogPath);
     
-    // Extraire la dernière version (premier bloc)
-    preg_match('/<!-- Version ([^-]+) -->\s*<div class="changelog-version-block">.*?<span class="version-number">\[([^\]]+)\]<\/span>\s*<span class="version-date">([^<]+)<\/span>(.*?)(?=<!-- Version|\z)/s', $changelogContent, $matches);
+    // Extraire toutes les versions disponibles
+    preg_match_all('/<!-- Version ([^-]+) -->.*?<span class="version-number">\[([^\]]+)\]<\/span>\s*<span class="version-date">([^<]+)<\/span>/s', $changelogContent, $allVersions, PREG_SET_ORDER);
+    
+    // Trouver l'index de la version sélectionnée ou prendre la dernière
+    $startIndex = 0;
+    if (!empty($selectedVersion)) {
+        foreach ($allVersions as $idx => $versionData) {
+            if (trim($versionData[2]) === $selectedVersion) {
+                $startIndex = $idx;
+                break;
+            }
+        }
+    }
+    
+    // Extraire le contenu depuis la version sélectionnée jusqu'à la première
+    if ($startIndex === 0) {
+        // Juste la dernière version
+        preg_match('/<!-- Version ([^-]+) -->\s*<div class="changelog-version-block">.*?<span class="version-number">\[([^\]]+)\]<\/span>\s*<span class="version-date">([^<]+)<\/span>(.*?)(?=<!-- Version|\z)/s', $changelogContent, $matches);
+    } else {
+        // Toutes les versions depuis la sélectionnée
+        $startVersionId = trim($allVersions[$startIndex][1]);
+        $endVersionId = isset($allVersions[$startIndex + 1]) ? trim($allVersions[$startIndex + 1][1]) : null;
+        
+        if ($endVersionId) {
+            $pattern = '/<!-- Version ' . preg_quote($startVersionId, '/') . ' -->.*?(?=<!-- Version ' . preg_quote($endVersionId, '/') . ')/s';
+        } else {
+            $pattern = '/<!-- Version ' . preg_quote($startVersionId, '/') . ' -->.*$/s';
+        }
+        
+        preg_match($pattern, $changelogContent, $multiVersionMatch);
+        
+        // La première version pour le titre
+        $version = trim($allVersions[0][2]);
+        $date = trim($allVersions[0][3]);
+        
+        // Tout le contenu extrait
+        $changesBlock = $multiVersionMatch[0] ?? '';
+        
+        $matches = [
+            $multiVersionMatch[0] ?? '',
+            $startVersionId,
+            $version,
+            $date,
+            $changesBlock
+        ];
+    }
     
     if (!$matches || count($matches) < 5) {
         echo json_encode(['success' => false, 'error' => 'Impossible d\'extraire les nouveautés du changelog']);

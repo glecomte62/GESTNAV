@@ -105,6 +105,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // ENVOYER LES NOUVEAUTÉS DE L'APP (DEPUIS changelog.php)
         if ($action === 'send_changelog') {
+            $selectedVersion = $_POST['selected_version'] ?? '';
+            
             // Lire le fichier changelog.php avec encodage UTF-8
             $changelogPath = __DIR__ . '/changelog.php';
             if (!file_exists($changelogPath)) {
@@ -119,8 +121,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $changelogContent = mb_convert_encoding($changelogContent, 'UTF-8', 'auto');
             }
             
-            // Extraire la dernière version (premier bloc)
-            preg_match('/<!-- Version ([^-]+) -->\s*<div class="changelog-version-block">.*?<span class="version-number">\[([^\]]+)\]<\/span>\s*<span class="version-date">([^<]+)<\/span>(.*?)(?=<!-- Version|\z)/s', $changelogContent, $matches);
+            // Extraire toutes les versions disponibles
+            preg_match_all('/<!-- Version ([^-]+) -->.*?<span class="version-number">\[([^\]]+)\]<\/span>\s*<span class="version-date">([^<]+)<\/span>/s', $changelogContent, $allVersions, PREG_SET_ORDER);
+            
+            // Trouver l'index de la version sélectionnée ou prendre la dernière
+            $startIndex = 0;
+            if (!empty($selectedVersion)) {
+                foreach ($allVersions as $idx => $versionData) {
+                    if (trim($versionData[2]) === $selectedVersion) {
+                        $startIndex = $idx;
+                        break;
+                    }
+                }
+            }
+            
+            // Extraire le contenu depuis la version sélectionnée jusqu'à la première
+            if ($startIndex === 0) {
+                // Juste la dernière version
+                preg_match('/<!-- Version ([^-]+) -->\s*<div class="changelog-version-block">.*?<span class="version-number">\[([^\]]+)\]<\/span>\s*<span class="version-date">([^<]+)<\/span>(.*?)(?=<!-- Version|\z)/s', $changelogContent, $matches);
+            } else {
+                // Toutes les versions depuis la sélectionnée
+                $startVersionId = trim($allVersions[$startIndex][1]);
+                $endVersionId = isset($allVersions[$startIndex + 1]) ? trim($allVersions[$startIndex + 1][1]) : null;
+                
+                if ($endVersionId) {
+                    $pattern = '/<!-- Version ' . preg_quote($startVersionId, '/') . ' -->.*?(?=<!-- Version ' . preg_quote($endVersionId, '/') . ')/s';
+                } else {
+                    $pattern = '/<!-- Version ' . preg_quote($startVersionId, '/') . ' -->.*$/s';
+                }
+                
+                preg_match($pattern, $changelogContent, $multiVersionMatch);
+                
+                // La première version pour le titre
+                $version = trim($allVersions[0][2]);
+                $date = trim($allVersions[0][3]);
+                
+                // Tout le contenu extrait
+                $changesBlock = $multiVersionMatch[0] ?? '';
+                
+                $matches = [
+                    $multiVersionMatch[0] ?? '',
+                    $startVersionId,
+                    $version,
+                    $date,
+                    $changesBlock
+                ];
+            }
             
             if (!$matches || count($matches) < 5) {
                 $_SESSION['error'] = 'Impossible d\'extraire les nouveautés du changelog';
@@ -252,6 +298,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->prepare("INSERT INTO email_logs (subject, recipient_count, sender_id, created_at) VALUES (?, ?, ?, NOW())")
                     ->execute([$subject, $successCount, $_SESSION['user_id'] ?? 0]);
+                    
+                // Logger la communication de changelog
+                $pdo->prepare("INSERT INTO changelog_communications (version, sent_at, sender_id, recipient_count) VALUES (?, NOW(), ?, ?)")
+                    ->execute([$version, $_SESSION['user_id'] ?? 0, $successCount]);
             } catch (Exception $e) {
                 error_log("Warning: email_logs table not found: " . $e->getMessage());
             }
@@ -659,6 +709,29 @@ $emailImage = $draft['emailImage'] ?? '';
 $attachments = $draft['attachments'] ?? [];
 $links = $draft['links'] ?? [];
 
+// Récupérer la dernière communication de changelog
+$lastChangelogComm = null;
+try {
+    $stmt = $pdo->query("SELECT version, sent_at, recipient_count FROM changelog_communications ORDER BY sent_at DESC LIMIT 1");
+    $lastChangelogComm = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Table n'existe pas encore
+}
+
+// Extraire toutes les versions du changelog
+$availableVersions = [];
+$changelogPath = __DIR__ . '/changelog.php';
+if (file_exists($changelogPath)) {
+    $changelogContent = file_get_contents($changelogPath);
+    preg_match_all('/<!-- Version ([^-]+) -->.*?<span class="version-number">\[([^\]]+)\]<\/span>\s*<span class="version-date">([^<]+)<\/span>/s', $changelogContent, $matches, PREG_SET_ORDER);
+    foreach ($matches as $match) {
+        $availableVersions[] = [
+            'version' => trim($match[2]),
+            'date' => trim($match[3])
+        ];
+    }
+}
+
 // Debug session image
 if ($currentStep == 5) {
     error_log("ETAPE 5 - emailImage type: " . gettype($emailImage) . ", value: " . json_encode($emailImage));
@@ -760,9 +833,18 @@ require 'header.php';
     <!-- Bouton rapide pour envoyer les nouveautés -->
     <div class="card" style="background: linear-gradient(135deg, rgba(0,75,141,0.05), rgba(0,160,198,0.05)); border: 2px solid #00a0c6;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-            <div>
+            <div style="flex: 1;">
                 <h3 style="margin: 0 0 0.5rem 0; color: #004b8d; font-size: 1.1rem;">🚀 Annonce automatique des nouveautés</h3>
-                <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">Envoyez un email à tous les membres avec les dernières évolutions de GESTNAV (depuis le CHANGELOG)</p>
+                <p style="margin: 0 0 0.5rem 0; color: #6b7280; font-size: 0.9rem;">Envoyez un email à tous les membres avec les dernières évolutions de GESTNAV (depuis le CHANGELOG)</p>
+                <?php if ($lastChangelogComm): ?>
+                    <p style="margin: 0; color: #10b981; font-size: 0.85rem; font-weight: 600;">
+                        📬 Dernière communication : <strong>v<?= htmlspecialchars($lastChangelogComm['version']) ?></strong> 
+                        le <?= date('d/m/Y à H:i', strtotime($lastChangelogComm['sent_at'])) ?> 
+                        (<?= $lastChangelogComm['recipient_count'] ?> destinataires)
+                    </p>
+                <?php else: ?>
+                    <p style="margin: 0; color: #f59e0b; font-size: 0.85rem; font-style: italic;">Aucune communication envoyée pour le moment</p>
+                <?php endif; ?>
             </div>
             <button type="button" onclick="showChangelogPreview()" class="btn btn-primary" style="white-space: nowrap; width: auto;">📣 Aperçu & Envoi</button>
         </div>
@@ -770,11 +852,32 @@ require 'header.php';
     
     <!-- Modal aperçu des nouveautés -->
     <div id="changelogModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; padding: 2rem;">
-        <div style="max-width: 800px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <div style="max-width: 900px; margin: 0 auto; background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
             <div style="background: linear-gradient(135deg, #004b8d, #00a0c6); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
                 <h2 style="margin: 0; font-size: 1.5rem;">📧 Aperçu de l'email</h2>
                 <button onclick="hideChangelogPreview()" style="background: rgba(255,255,255,0.2); border: none; color: white; font-size: 1.5rem; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
             </div>
+            
+            <div style="padding: 1.5rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 0.5rem; font-size: 0.9rem;">
+                    📋 Choisir à partir de quelle version générer l'email :
+                </label>
+                <select id="versionSelector" onchange="updatePreview()" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; font-size: 0.9rem; background: white;">
+                    <?php foreach ($availableVersions as $idx => $versionData): ?>
+                        <option value="<?= htmlspecialchars($versionData['version']) ?>" <?= $idx === 0 ? 'selected' : '' ?>>
+                            <?php if ($idx === 0): ?>
+                                ✨ Dernière version uniquement : <?= htmlspecialchars($versionData['version']) ?> (<?= htmlspecialchars($versionData['date']) ?>)
+                            <?php else: ?>
+                                📚 Depuis la version <?= htmlspecialchars($versionData['version']) ?> (<?= htmlspecialchars($versionData['date']) ?>) jusqu'à aujourd'hui
+                            <?php endif; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <p style="margin: 0.75rem 0 0 0; font-size: 0.8rem; color: #6b7280; font-style: italic;">
+                    💡 Si plusieurs versions se sont accumulées, sélectionnez la version de départ pour inclure toutes les nouveautés depuis cette date.
+                </p>
+            </div>
+            
             <div id="changelogPreviewContent" style="padding: 2rem; max-height: 60vh; overflow-y: auto;">
                 <div style="text-align: center; padding: 2rem;">
                     <div class="spinner-border" role="status" style="width: 3rem; height: 3rem; color: #004b8d;"></div>
@@ -783,8 +886,9 @@ require 'header.php';
             </div>
             <div style="padding: 1.5rem; border-top: 1px solid #e5e7eb; display: flex; gap: 1rem; justify-content: flex-end;">
                 <button onclick="hideChangelogPreview()" class="btn btn-secondary">Annuler</button>
-                <form method="post" style="display: inline;">
+                <form method="post" id="sendChangelogForm" style="display: inline;">
                     <input type="hidden" name="action" value="send_changelog">
+                    <input type="hidden" name="selected_version" id="selectedVersionInput" value="<?= htmlspecialchars($availableVersions[0]['version'] ?? '') ?>">
                     <button type="submit" class="btn btn-primary">✉️ Confirmer l'envoi</button>
                 </form>
             </div>
@@ -1204,9 +1308,21 @@ updateSubjectPreview();
 function showChangelogPreview() {
     document.getElementById('changelogModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
+    updatePreview();
+}
+
+function updatePreview() {
+    const versionSelector = document.getElementById('versionSelector');
+    const selectedVersion = versionSelector ? versionSelector.value : '';
+    
+    // Mettre à jour l'input hidden
+    document.getElementById('selectedVersionInput').value = selectedVersion;
+    
+    // Afficher un loader
+    document.getElementById('changelogPreviewContent').innerHTML = '<div style="text-align: center; padding: 2rem;"><div style="border: 4px solid #f3f4f6; border-top: 4px solid #004b8d; border-radius: 50%; width: 48px; height: 48px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 1rem; color: #6b7280;">Chargement de l\'aperçu...</p></div><style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); }}</style>';
     
     // Charger l'aperçu via fetch
-    fetch('preview_changelog_email.php')
+    fetch('preview_changelog_email.php?version=' + encodeURIComponent(selectedVersion))
         .then(response => response.json())
         .then(data => {
             if (data.success) {
