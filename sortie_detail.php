@@ -409,6 +409,18 @@ try {
     $next_sortie = null;
 }
 
+// Récupérer la sortie précédente chronologique avant celle-ci (pour badge "Précédente sortie")
+$previous_sortie = null;
+try {
+    $stmt_prev = $pdo->prepare("SELECT id, titre, date_sortie FROM sorties 
+        WHERE date_sortie < ? AND statut != 'annulée' 
+        ORDER BY date_sortie DESC LIMIT 1");
+    $stmt_prev->execute([$sortie['date_sortie']]);
+    $previous_sortie = $stmt_prev->fetch(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $previous_sortie = null;
+}
+
 // Auto-associer les machines des membres inscrits (si liées via machines_owners)
 try {
     $inscrits_ids = array_map(fn($r) => (int)$r['user_id'], $inscrits);
@@ -1168,6 +1180,7 @@ require 'header.php'; ?>
                         // Vérifier priorité pour cette pré-inscription
                         $isPriority = false;
                         $isInscritNext = false;
+                        $wasInPrevious = false;
                         try {
                             $stP = $pdo->prepare('SELECT active FROM sortie_priorites WHERE user_id = ?');
                             $stP->execute([(int)($p['u_id'] ?? 0)]);
@@ -1179,11 +1192,21 @@ require 'header.php'; ?>
                                 $stNext->execute([$next_sortie['id'], (int)($p['u_id'] ?? 0)]);
                                 $isInscritNext = (bool)$stNext->fetchColumn();
                             }
+                            
+                            // Vérifier si inscrit ou affecté à la sortie précédente
+                            if ($previous_sortie) {
+                                $stPrev = $pdo->prepare('SELECT COUNT(*) FROM sortie_inscriptions WHERE sortie_id = ? AND user_id = ?');
+                                $stPrev->execute([$previous_sortie['id'], (int)($p['u_id'] ?? 0)]);
+                                $wasInPrevious = (bool)$stPrev->fetchColumn();
+                            }
                         } catch (Throwable $e) { $isPriority = false; }
                     ?>
                     <tr>
                         <td>
                             <strong><?= htmlspecialchars(trim(($p['u_prenom'] ?? '').' '.($p['u_nom'] ?? ''))) ?></strong>
+                            <?php if ($wasInPrevious): ?>
+                                <span class="badge-pill" style="background:#e3f2fd;color:#0277bd;border:1px solid #90caf9; margin-left:.4rem;" title="Était inscrit à la précédente sortie">📅 Précédente sortie</span>
+                            <?php endif; ?>
                             <?php if ($isPriority): ?>
                                 <span class="badge-pill" style="background:#fde8e8;color:#b00020;border:1px solid #f5b5b5; margin-left:.4rem;" title="Prioritaire sur la prochaine sortie">🎯 PRIORITAIRE</span>
                                 <?php if ($isInscritNext): ?>
@@ -1438,16 +1461,27 @@ require 'header.php'; ?>
                     <?php
                         // Vérifier priorité (badge) pour cet inscrit
                         $isPriority = false;
+                        $wasInPrevious = false;
                         try {
                             $stP = $pdo->prepare('SELECT active FROM sortie_priorites WHERE user_id = ?');
                             $stP->execute([ (int)$i['user_id'] ]);
                             $isPriority = (bool)($stP->fetchColumn() ?? 0);
+                            
+                            // Vérifier si inscrit ou affecté à la sortie précédente
+                            if ($previous_sortie) {
+                                $stPrev = $pdo->prepare('SELECT COUNT(*) FROM sortie_inscriptions WHERE sortie_id = ? AND user_id = ?');
+                                $stPrev->execute([$previous_sortie['id'], (int)$i['user_id']]);
+                                $wasInPrevious = (bool)$stPrev->fetchColumn();
+                            }
                         } catch (Throwable $e) { $isPriority = false; }
                     ?>
                     <div class="inscrit-item">
                         <div>
                             <div class="inscrit-name">
                                 <?= htmlspecialchars($i['prenom'] . ' ' . $i['nom']) ?>
+                                <?php if ($wasInPrevious): ?>
+                                    <span class="badge-pill" style="background:#e3f2fd;color:#0277bd;border:1px solid #90caf9; margin-left:.4rem;" title="Était inscrit à la précédente sortie">📅 Précédente sortie</span>
+                                <?php endif; ?>
                                 <?php if ($isPriority): ?>
                                     <span class="badge-pill" style="background:#fde8e8;color:#b00020;border:1px solid #f5b5b5; margin-left:.4rem;" title="Prioritaire sur la prochaine sortie">PRIORITAIRE</span>
                                 <?php endif; ?>
