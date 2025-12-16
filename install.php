@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
                 
-                $stmt = $pdo->prepare("INSERT INTO users (prenom, nom, email, password_hash, type_membre, admin, actif, created_at) VALUES (?, ?, ?, ?, 'club', 1, 1, NOW())");
+                $stmt = $pdo->prepare("INSERT INTO users (prenom, nom, email, password_hash, type_membre, role, actif, created_at) VALUES (?, ?, ?, ?, 'club', 'admin', 1, NOW())");
                 $stmt->execute([$prenom, $nom, $email, $hashedPassword]);
                 
                 $_SESSION['install_data']['admin_email'] = $email;
