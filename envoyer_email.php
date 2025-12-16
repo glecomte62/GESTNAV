@@ -136,91 +136,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             
             // Extraire le contenu depuis la version sélectionnée jusqu'à la première
+            $allAddedItems = [];
+            $allChangedItems = [];
+            $allFixedItems = [];
+            
             if ($startIndex === 0) {
                 // Juste la dernière version
-                preg_match('/<!-- Version ([^-]+) -->\s*<div class="changelog-version-block">.*?<span class="version-number">\[([^\]]+)\]<\/span>\s*<span class="version-date">([^<]+)<\/span>(.*?)(?=<!-- Version|\z)/s', $changelogContent, $matches);
+                $versionsToProcess = [0];
             } else {
-                // Toutes les versions depuis la sélectionnée
-                $startVersionId = trim($allVersions[$startIndex][1]);
-                $endVersionId = isset($allVersions[$startIndex + 1]) ? trim($allVersions[$startIndex + 1][1]) : null;
+                // Toutes les versions depuis la sélectionnée jusqu'à la plus récente
+                $versionsToProcess = range(0, $startIndex);
+            }
+            
+            // Collecter tous les items de toutes les versions
+            foreach ($versionsToProcess as $versionIdx) {
+                $versionId = trim($allVersions[$versionIdx][1]);
+                $nextVersionId = isset($allVersions[$versionIdx + 1]) ? trim($allVersions[$versionIdx + 1][1]) : null;
                 
-                if ($endVersionId) {
-                    $pattern = '/<!-- Version ' . preg_quote($startVersionId, '/') . ' -->.*?(?=<!-- Version ' . preg_quote($endVersionId, '/') . ')/s';
+                // Extraire le bloc de cette version
+                if ($nextVersionId) {
+                    $pattern = '/<!-- Version ' . preg_quote($versionId, '/') . ' -->.*?(?=<!-- Version ' . preg_quote($nextVersionId, '/') . ')/s';
                 } else {
-                    $pattern = '/<!-- Version ' . preg_quote($startVersionId, '/') . ' -->.*$/s';
+                    $pattern = '/<!-- Version ' . preg_quote($versionId, '/') . ' -->.*$/s';
                 }
                 
-                preg_match($pattern, $changelogContent, $multiVersionMatch);
-                
-                // La première version pour le titre
-                $version = trim($allVersions[0][2]);
-                $date = trim($allVersions[0][3]);
-                
-                // Tout le contenu extrait
-                $changesBlock = $multiVersionMatch[0] ?? '';
-                
-                $matches = [
-                    $multiVersionMatch[0] ?? '',
-                    $startVersionId,
-                    $version,
-                    $date,
-                    $changesBlock
-                ];
+                if (preg_match($pattern, $changelogContent, $versionBlock)) {
+                    $block = $versionBlock[0];
+                    
+                    // Extraire Added
+                    if (preg_match('/<div class="changelog-section-added">.*?<ul class="changelog-items">(.*?)<\/ul>/s', $block, $addedMatch)) {
+                        preg_match_all('/<li>(.*?)<\/li>/s', $addedMatch[1], $items);
+                        foreach ($items[1] as $item) {
+                            $cleanItem = strip_tags($item, '<strong><code>');
+                            if (!empty(trim($cleanItem))) {
+                                $allAddedItems[] = $cleanItem;
+                            }
+                        }
+                    }
+                    
+                    // Extraire Changed
+                    if (preg_match('/<div class="changelog-section-changed">.*?<ul class="changelog-items">(.*?)<\/ul>/s', $block, $changedMatch)) {
+                        preg_match_all('/<li>(.*?)<\/li>/s', $changedMatch[1], $items);
+                        foreach ($items[1] as $item) {
+                            $cleanItem = strip_tags($item, '<strong><code>');
+                            if (!empty(trim($cleanItem))) {
+                                $allChangedItems[] = $cleanItem;
+                            }
+                        }
+                    }
+                    
+                    // Extraire Fixed
+                    if (preg_match('/<div class="changelog-section-fixed">.*?<ul class="changelog-items">(.*?)<\/ul>/s', $block, $fixedMatch)) {
+                        preg_match_all('/<li>(.*?)<\/li>/s', $fixedMatch[1], $items);
+                        foreach ($items[1] as $item) {
+                            $cleanItem = strip_tags($item, '<strong><code>');
+                            if (!empty(trim($cleanItem))) {
+                                $allFixedItems[] = $cleanItem;
+                            }
+                        }
+                    }
+                }
             }
             
-            if (!$matches || count($matches) < 5) {
-                $_SESSION['error'] = 'Impossible d\'extraire les nouveautés du changelog';
-                header('Location: envoyer_email.php');
-                exit;
-            }
-            
-            $version = trim($matches[2]);
-            $date = trim($matches[3]);
-            $changesBlock = $matches[4];
+            $version = trim($allVersions[0][2]);
+            $date = trim($allVersions[0][3]);
             
             // S'assurer que les données extraites sont en UTF-8
             $version = mb_convert_encoding($version, 'UTF-8', 'auto');
             $date = mb_convert_encoding($date, 'UTF-8', 'auto');
-            $changesBlock = mb_convert_encoding($changesBlock, 'UTF-8', 'auto');
             
-            // Extraire les sections (Added, Changed, Fixed)
+            // Construire les sections HTML avec tous les items collectés
             $sectionsHtml = '';
             
             // Section Added (✨)
-            if (preg_match('/<div class="changelog-section-added">(.*?)<\/div>\s*(?=<div class="changelog-section|$)/s', $changesBlock, $addedMatch)) {
-                $addedContent = $addedMatch[1];
-                // Extraire les items de la liste
-                preg_match('/<ul class="changelog-items">(.*?)<\/ul>/s', $addedContent, $itemsMatch);
-                if ($itemsMatch) {
-                    $sectionsHtml .= '<h3 style="color: #10b981; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">✨ Nouveautés</h3>';
-                    $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
-                    $sectionsHtml .= strip_tags($itemsMatch[1], '<li><strong><code><ul>');
-                    $sectionsHtml .= '</ul>';
+            if (!empty($allAddedItems)) {
+                $sectionsHtml .= '<h3 style="color: #10b981; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">✨ Nouveautés</h3>';
+                $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
+                foreach ($allAddedItems as $item) {
+                    $sectionsHtml .= '<li>' . $item . '</li>';
                 }
+                $sectionsHtml .= '</ul>';
             }
             
             // Section Changed (🔄)
-            if (preg_match('/<div class="changelog-section-changed">(.*?)<\/div>\s*(?=<div class="changelog-section|$)/s', $changesBlock, $changedMatch)) {
-                $changedContent = $changedMatch[1];
-                preg_match('/<ul class="changelog-items">(.*?)<\/ul>/s', $changedContent, $itemsMatch);
-                if ($itemsMatch) {
-                    $sectionsHtml .= '<h3 style="color: #f59e0b; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">🔄 Améliorations</h3>';
-                    $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
-                    $sectionsHtml .= strip_tags($itemsMatch[1], '<li><strong><code><ul>');
-                    $sectionsHtml .= '</ul>';
+            if (!empty($allChangedItems)) {
+                $sectionsHtml .= '<h3 style="color: #f59e0b; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">🔄 Améliorations</h3>';
+                $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
+                foreach ($allChangedItems as $item) {
+                    $sectionsHtml .= '<li>' . $item . '</li>';
                 }
+                $sectionsHtml .= '</ul>';
             }
             
             // Section Fixed (🐛)
-            if (preg_match('/<div class="changelog-section-fixed">(.*?)<\/div>\s*(?=<div class="changelog-section|$)/s', $changesBlock, $fixedMatch)) {
-                $fixedContent = $fixedMatch[1];
-                preg_match('/<ul class="changelog-items">(.*?)<\/ul>/s', $fixedContent, $itemsMatch);
-                if ($itemsMatch) {
-                    $sectionsHtml .= '<h3 style="color: #ef4444; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">🐛 Corrections</h3>';
-                    $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
-                    $sectionsHtml .= strip_tags($itemsMatch[1], '<li><strong><code><ul>');
-                    $sectionsHtml .= '</ul>';
+            if (!empty($allFixedItems)) {
+                $sectionsHtml .= '<h3 style="color: #ef4444; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">🐛 Corrections</h3>';
+                $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
+                foreach ($allFixedItems as $item) {
+                    $sectionsHtml .= '<li>' . $item . '</li>';
                 }
+                $sectionsHtml .= '</ul>';
             }
             
             // Nettoyer le HTML
@@ -228,6 +243,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // S'assurer que le HTML des sections est en UTF-8
             $sectionsHtml = mb_convert_encoding($sectionsHtml, 'UTF-8', 'auto');
+            
+            // Message d'introduction personnalisé selon le nombre de versions
+            $introMessage = '';
+            if ($startIndex > 0) {
+                $nbVersions = $startIndex + 1;
+                $introMessage = "Nous avons le plaisir de vous présenter <strong>$nbVersions nouvelle" . ($nbVersions > 1 ? 's' : '') . " version" . ($nbVersions > 1 ? 's' : '') . "</strong> de GESTNAV ! Voici un récapitulatif de toutes les évolutions apportées depuis la version " . trim($allVersions[$startIndex][2]) . " :";
+            } else {
+                $introMessage = "Nous sommes ravis de vous annoncer que votre application <strong>GESTNAV</strong> vient d'être mise à jour avec de nouvelles fonctionnalités et améliorations :";
+            }
             
             // Récupérer tous les membres actifs
             $stmt = $pdo->query("SELECT id, email, prenom, nom FROM users WHERE actif = 1 AND email IS NOT NULL AND email != ''");
@@ -239,7 +263,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
             
-            $subject = "🚀 Votre application GESTNAV évolue encore... (v$version)";
+            // Plage de versions pour le sujet
+            $versionRange = '';
+            if ($startIndex > 0) {
+                $versionRange = ' (versions ' . trim($allVersions[$startIndex][2]) . ' à ' . $version . ')';
+            } else {
+                $versionRange = ' (v' . $version . ')';
+            }
+            
+            $subject = "🚀 Votre application GESTNAV évolue encore..." . $versionRange;
             // S'assurer que le sujet est en UTF-8
             $subject = mb_encode_mimeheader($subject, 'UTF-8', 'B');
             
@@ -252,7 +284,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $htmlMessage .= '<div style="padding: 2rem; background: white; border: 1px solid #e5e7eb; border-top: none;">';
             $htmlMessage .= '<p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Bonjour {{prenom}},</p>';
-            $htmlMessage .= '<p style="margin-bottom: 1.5rem;">Nous sommes ravis de vous annoncer que votre application <strong>GESTNAV</strong> vient d\'être mise à jour avec de nouvelles fonctionnalités et améliorations :</p>';
+            $htmlMessage .= '<p style="margin-bottom: 1.5rem;">' . $introMessage . '</p>';
             $htmlMessage .= '<div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #00a0c6;">';
             $htmlMessage .= $sectionsHtml;
             $htmlMessage .= '</div>';
@@ -862,17 +894,20 @@ require 'header.php';
                 <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 0.5rem; font-size: 0.9rem;">
                     📋 Choisir à partir de quelle version générer l'email :
                 </label>
-                <select id="versionSelector" onchange="updatePreview()" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; font-size: 0.9rem; background: white;">
-                    <?php foreach ($availableVersions as $idx => $versionData): ?>
-                        <option value="<?= htmlspecialchars($versionData['version']) ?>" <?= $idx === 0 ? 'selected' : '' ?>>
-                            <?php if ($idx === 0): ?>
-                                ✨ Dernière version uniquement : <?= htmlspecialchars($versionData['version']) ?> (<?= htmlspecialchars($versionData['date']) ?>)
-                            <?php else: ?>
-                                📚 Depuis la version <?= htmlspecialchars($versionData['version']) ?> (<?= htmlspecialchars($versionData['date']) ?>) jusqu'à aujourd'hui
-                            <?php endif; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+                    <select id="versionSelector" style="flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; font-size: 0.9rem; background: white;">
+                        <?php foreach ($availableVersions as $idx => $versionData): ?>
+                            <option value="<?= htmlspecialchars($versionData['version']) ?>" <?= $idx === 0 ? 'selected' : '' ?>>
+                                <?php if ($idx === 0): ?>
+                                    ✨ Dernière version uniquement : <?= htmlspecialchars($versionData['version']) ?> (<?= htmlspecialchars($versionData['date']) ?>)
+                                <?php else: ?>
+                                    📚 Depuis la version <?= htmlspecialchars($versionData['version']) ?> (<?= htmlspecialchars($versionData['date']) ?>) jusqu'à aujourd'hui
+                                <?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button onclick="updatePreview()" class="btn btn-primary" style="white-space: nowrap; padding: 0.75rem 1.25rem;">🔍 Aperçu</button>
+                </div>
                 <p style="margin: 0.75rem 0 0 0; font-size: 0.8rem; color: #6b7280; font-style: italic;">
                     💡 Si plusieurs versions se sont accumulées, sélectionnez la version de départ pour inclure toutes les nouveautés depuis cette date.
                 </p>
@@ -1308,7 +1343,8 @@ updateSubjectPreview();
 function showChangelogPreview() {
     document.getElementById('changelogModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
-    updatePreview();
+    // Ne pas charger automatiquement, attendre le clic sur "Aperçu"
+    document.getElementById('changelogPreviewContent').innerHTML = '<div style="text-align: center; padding: 3rem; color: #6b7280;"><p style="font-size: 1.1rem; margin-bottom: 0.5rem;">👆 Sélectionnez une version ci-dessus</p><p style="font-size: 0.9rem; opacity: 0.8;">puis cliquez sur "🔍 Aperçu" pour générer la prévisualisation</p></div>';
 }
 
 function updatePreview() {

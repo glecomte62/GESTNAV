@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Drag & Drop</title>
+    <style>
+        .dropzone {
+            width: 400px;
+            height: 200px;
+            border: 3px dashed #004b8d;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            margin: 50px auto;
+        }
+        .dropzone:hover {
+            border-color: #00a0c6;
+            background: #e3f2fd;
+        }
+        .dropzone.drag-over {
+            border-color: #00a0c6;
+            background: #bbdefb;
+        }
+        .info {
+            margin: 20px auto;
+            max-width: 400px;
+            padding: 10px;
+            background: #d4edda;
+            border-radius: 5px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Test Drag & Drop Simple</h1>
+    
+    <div class="dropzone" id="dropZone">
+        <h2>📁</h2>
+        <p>Glissez un fichier ici</p>
+        <p style="font-size: 0.9em; color: #666;">ou cliquez pour sélectionner</p>
+    </div>
+    
+    <input type="file" id="fileInput" style="display: none;">
+    
+    <div class="info" id="info"></div>
+    
+    <div style="text-align: center; margin-top: 20px;">
+        <h3>Console:</h3>
+        <div id="console" style="background: #f5f5f5; padding: 10px; margin: 20px auto; max-width: 600px; text-align: left; font-family: monospace; font-size: 12px;"></div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const info = document.getElementById('info');
+        const consoleDiv = document.getElementById('console');
+        
+        function log(msg) {
+            console.log(msg);
+            consoleDiv.innerHTML += msg + '<br>';
+        }
+        
+        log('✅ Script chargé');
+        log('dropZone: ' + (dropZone ? 'OK' : 'ERREUR'));
+        log('fileInput: ' + (fileInput ? 'OK' : 'ERREUR'));
+        
+        // Clic sur la zone
+        dropZone.addEventListener('click', () => {
+            log('🖱️ Clic détecté');
+            fileInput.click();
+        });
+        
+        // Sélection de fichier
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                log('📁 Fichier sélectionné: ' + file.name + ' (' + file.size + ' bytes)');
+                info.textContent = '✅ Fichier: ' + file.name;
+                info.style.display = 'block';
+            }
+        });
+        
+        // Prévenir comportement par défaut
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+        
+        // Effet visuel drag
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                log('🔵 ' + eventName);
+                dropZone.classList.add('drag-over');
+            }, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => {
+                log('⚪ ' + eventName);
+                dropZone.classList.remove('drag-over');
+            }, false);
+        });
+        
+        // Drop
+        dropZone.addEventListener('drop', (e) => {
+            log('📦 DROP!');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                log('✅ Fichier droppé: ' + file.name + ' (' + file.size + ' bytes)');
+                fileInput.files = files;
+                info.textContent = '✅ Fichier droppé: ' + file.name;
+                info.style.display = 'block';
+            }
+        }, false);
+        
+        log('🚀 Tous les listeners configurés');
+    </script>
+</body>
+</html>
