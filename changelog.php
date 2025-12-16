@@ -145,6 +145,36 @@ require_login();
     <h1 class="changelog-title">Historique</h1>
     <p class="changelog-subtitle">Suivi des mises a jour de GESTNAV ULM</p>
 
+    <!-- Version 2.4.2 -->
+    <div class="changelog-version-block">
+        <div class="changelog-version-header">
+            <span class="version-number">[2.4.2]</span>
+            <span class="version-date">2025-12-16</span>
+        </div>
+
+        <div class="changelog-section-changed">
+            <h3 class="changelog-section-type">Changed</h3>
+            <ul class="changelog-items">
+                <li><strong>Page de connexion</strong>: Refonte complète du design de la page de login avec interface moderne.</li>
+                <li>Fond dégradé bleu (#003a64 → #0a548b) avec animations subtiles de cercles flottants.</li>
+                <li>Carte de login avec effet glassmorphism et ombres portées renforcées.</li>
+                <li>Logo avec effet de halo animé pulsé.</li>
+                <li>Titre avec dégradé de couleur et typographie améliorée.</li>
+                <li>Champs de formulaire flottants avec bordures arrondies et transitions fluides.</li>
+                <li>Bouton de connexion avec dégradé, effet 3D et animation au survol.</li>
+                <li>Badge de version en orange (#f0a500) bien visible.</li>
+                <li>Animation de shake pour les messages d'erreur.</li>
+                <li><strong>Contraste de l'application</strong>: Amélioration du contraste général de l'interface principale.</li>
+                <li>Fond gris clair avec dégradé subtil (#f0f4f8 → #e2e8f0) pour meilleur contraste avec la navbar bleue.</li>
+                <li>Textes plus foncés (#1a202c) pour une meilleure lisibilité.</li>
+                <li>Bordures des cartes renforcées (#cbd5e0).</li>
+                <li>Ombres portées augmentées (0 8px 24px) sur les cartes pour meilleur relief.</li>
+                <li><strong>Footer</strong>: Version affichée dynamiquement depuis la constante GESTNAV_VERSION.</li>
+                <li>Synchronisation automatique de la version dans le footer, login et changelog.</li>
+            </ul>
+        </div>
+    </div>
+
     <!-- Version 2.4.1 -->
     <div class="changelog-version-block">
         <div class="changelog-version-header">
