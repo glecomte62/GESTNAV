@@ -148,7 +148,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $versionsToProcess = range(0, $startIndex);
             }
             
-            // Collecter tous les items de toutes les versions
+            // Fonction pour filtrer les items admin (ne concerne pas les utilisateurs finaux)
+            function isAdminFeature($item) {
+                $adminKeywords = [
+                    'admin', 'administration', 'validation', 'validée', 'refusée', 'refuser',
+                    'interface d\'administration', 'page d\'administration', 'modal de détails',
+                    'preinscription', 'pré-inscription', 'candidat', 'candidature',
+                    'migration', 'script', 'setup', 'install', 'deploy', 'debug',
+                    'database', 'table', 'colonne', 'champ', 'schema', 'SQL',
+                    'architecture', 'organisation du code', 'nettoyage', 'archivage',
+                    'logs', 'historique emails', 'notification aux administrateurs',
+                    'bouton "valider"', 'bouton "refuser"', 'filtres rapides',
+                    'tableau de bord', 'statistiques en temps réel', 'config',
+                    'PHPMailer', 'SMTP', 'Brevo', 'mail_helper'
+                ];
+                
+                $lowerItem = mb_strtolower($item);
+                foreach ($adminKeywords as $keyword) {
+                    if (stripos($lowerItem, $keyword) !== false) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            // Collecter tous les items de toutes les versions (en filtrant les fonctionnalités admin)
             foreach ($versionsToProcess as $versionIdx) {
                 $versionId = trim($allVersions[$versionIdx][1]);
                 $nextVersionId = isset($allVersions[$versionIdx + 1]) ? trim($allVersions[$versionIdx + 1][1]) : null;
@@ -168,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         preg_match_all('/<li>(.*?)<\/li>/s', $addedMatch[1], $items);
                         foreach ($items[1] as $item) {
                             $cleanItem = strip_tags($item, '<strong><code>');
-                            if (!empty(trim($cleanItem))) {
+                            if (!empty(trim($cleanItem)) && !isAdminFeature($cleanItem)) {
                                 $allAddedItems[] = $cleanItem;
                             }
                         }
@@ -179,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         preg_match_all('/<li>(.*?)<\/li>/s', $changedMatch[1], $items);
                         foreach ($items[1] as $item) {
                             $cleanItem = strip_tags($item, '<strong><code>');
-                            if (!empty(trim($cleanItem))) {
+                            if (!empty(trim($cleanItem)) && !isAdminFeature($cleanItem)) {
                                 $allChangedItems[] = $cleanItem;
                             }
                         }
@@ -190,7 +214,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         preg_match_all('/<li>(.*?)<\/li>/s', $fixedMatch[1], $items);
                         foreach ($items[1] as $item) {
                             $cleanItem = strip_tags($item, '<strong><code>');
-                            if (!empty(trim($cleanItem))) {
+                            if (!empty(trim($cleanItem)) && !isAdminFeature($cleanItem)) {
                                 $allFixedItems[] = $cleanItem;
                             }
                         }
