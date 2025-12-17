@@ -25,7 +25,9 @@ try {
     $startIndex = 0;
     if (!empty($selectedVersion)) {
         foreach ($allVersions as $idx => $versionData) {
-            if (trim($versionData[2]) === $selectedVersion) {
+            $versionNum = trim($versionData[2]);
+            // Matcher exactement ou si la sélection est le début (ex: "1.5" match "1.5.0")
+            if ($versionNum === $selectedVersion || strpos($versionNum, $selectedVersion . '.') === 0) {
                 $startIndex = $idx;
                 break;
             }
