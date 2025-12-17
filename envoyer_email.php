@@ -205,14 +205,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $version = mb_convert_encoding($version, 'UTF-8', 'auto');
             $date = mb_convert_encoding($date, 'UTF-8', 'auto');
             
-            // Construire un condensé user-friendly des modifications
+            // Construire un condensé ultra user-friendly des modifications
             $sectionsHtml = '';
             
-            // Fonction pour créer un condensé intelligent
-            function createCondensedSummary($items, $maxItems = 5) {
+            // Fonction pour créer un condensé très court
+            function createCondensedSummary($items, $maxItems = 2) {
                 if (empty($items)) return ['items' => [], 'more' => 0];
                 
-                // Si peu d'items, tout afficher
+                // Si très peu d'items, tout afficher
                 if (count($items) <= $maxItems) {
                     return ['items' => $items, 'more' => 0];
                 }
@@ -226,44 +226,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Section Added (✨)
             if (!empty($allAddedItems)) {
-                $summary = createCondensedSummary($allAddedItems, 4);
-                $sectionsHtml .= '<h3 style="color: #10b981; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">✨ Nouveautés</h3>';
-                $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
-                foreach ($summary['items'] as $item) {
-                    $sectionsHtml .= '<li>' . $item . '</li>';
+                $summary = createCondensedSummary($allAddedItems, 2);
+                $sectionsHtml .= '<h3 style="color: #10b981; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 1.05rem;">✨ Nouveautés</h3>';
+                if (!empty($summary['items'])) {
+                    $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.6;">';
+                    foreach ($summary['items'] as $item) {
+                        $sectionsHtml .= '<li>' . $item . '</li>';
+                    }
+                    if ($summary['more'] > 0) {
+                        $sectionsHtml .= '</ul>';
+                        $sectionsHtml .= '<p style="margin: 0.25rem 0 0 1.5rem; color: #6b7280; font-size: 0.9rem; font-style: italic;">+ ' . $summary['more'] . ' autre' . ($summary['more'] > 1 ? 's' : '') . ' nouveauté' . ($summary['more'] > 1 ? 's' : '') . '</p>';
+                    } else {
+                        $sectionsHtml .= '</ul>';
+                    }
                 }
-                if ($summary['more'] > 0) {
-                    $sectionsHtml .= '<li style="color: #6b7280; font-style: italic;">... et ' . $summary['more'] . ' autre' . ($summary['more'] > 1 ? 's' : '') . ' nouveauté' . ($summary['more'] > 1 ? 's' : '') . '</li>';
-                }
-                $sectionsHtml .= '</ul>';
             }
             
             // Section Changed (🔄)
             if (!empty($allChangedItems)) {
-                $summary = createCondensedSummary($allChangedItems, 4);
-                $sectionsHtml .= '<h3 style="color: #f59e0b; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">🔄 Améliorations</h3>';
-                $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
-                foreach ($summary['items'] as $item) {
-                    $sectionsHtml .= '<li>' . $item . '</li>';
+                $summary = createCondensedSummary($allChangedItems, 2);
+                $sectionsHtml .= '<h3 style="color: #f59e0b; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 1.05rem;">🔄 Améliorations</h3>';
+                if (!empty($summary['items'])) {
+                    $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.6;">';
+                    foreach ($summary['items'] as $item) {
+                        $sectionsHtml .= '<li>' . $item . '</li>';
+                    }
+                    if ($summary['more'] > 0) {
+                        $sectionsHtml .= '</ul>';
+                        $sectionsHtml .= '<p style="margin: 0.25rem 0 0 1.5rem; color: #6b7280; font-size: 0.9rem; font-style: italic;">+ ' . $summary['more'] . ' autre' . ($summary['more'] > 1 ? 's' : '') . ' amélioration' . ($summary['more'] > 1 ? 's' : '') . '</p>';
+                    } else {
+                        $sectionsHtml .= '</ul>';
+                    }
                 }
-                if ($summary['more'] > 0) {
-                    $sectionsHtml .= '<li style="color: #6b7280; font-style: italic;">... et ' . $summary['more'] . ' autre' . ($summary['more'] > 1 ? 's' : '') . ' amélioration' . ($summary['more'] > 1 ? 's' : '') . '</li>';
-                }
-                $sectionsHtml .= '</ul>';
             }
             
             // Section Fixed (🐛)
             if (!empty($allFixedItems)) {
-                $summary = createCondensedSummary($allFixedItems, 3);
-                $sectionsHtml .= '<h3 style="color: #ef4444; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">🐛 Corrections</h3>';
-                $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
-                foreach ($summary['items'] as $item) {
-                    $sectionsHtml .= '<li>' . $item . '</li>';
+                $summary = createCondensedSummary($allFixedItems, 2);
+                $sectionsHtml .= '<h3 style="color: #ef4444; margin-top: 1rem; margin-bottom: 0.5rem; font-size: 1.05rem;">🐛 Corrections</h3>';
+                if (!empty($summary['items'])) {
+                    $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.6;">';
+                    foreach ($summary['items'] as $item) {
+                        $sectionsHtml .= '<li>' . $item . '</li>';
+                    }
+                    if ($summary['more'] > 0) {
+                        $sectionsHtml .= '</ul>';
+                        $sectionsHtml .= '<p style="margin: 0.25rem 0 0 1.5rem; color: #6b7280; font-size: 0.9rem; font-style: italic;">+ ' . $summary['more'] . ' autre' . ($summary['more'] > 1 ? 's' : '') . ' correction' . ($summary['more'] > 1 ? 's' : '') . '</p>';
+                    } else {
+                        $sectionsHtml .= '</ul>';
+                    }
                 }
-                if ($summary['more'] > 0) {
-                    $sectionsHtml .= '<li style="color: #6b7280; font-style: italic;">... et ' . $summary['more'] . ' autre' . ($summary['more'] > 1 ? 's' : '') . ' correction' . ($summary['more'] > 1 ? 's' : '') . '</li>';
-                }
-                $sectionsHtml .= '</ul>';
             }
             
             // Nettoyer le HTML
