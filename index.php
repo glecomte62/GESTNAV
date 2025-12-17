@@ -303,90 +303,86 @@ try {
         </div>
     </div>
     <?php endif; ?>
-</div>
-
-<!-- Bandeau horizontal des prochains événements -->
-<?php if (count($evenements) > 0): ?>
-<div class="mb-4">
-    <div class="gn-card" style="padding: 1.5rem; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h3 style="margin: 0; color: var(--gn-primary); font-weight: 600;">
-                <i class="bi bi-calendar-event"></i> Prochains événements
-            </h3>
-            <a href="evenements_list.php" class="btn btn-sm btn-outline-primary">
-                Voir tous les événements <i class="bi bi-arrow-right"></i>
-            </a>
-        </div>
-        
-        <div class="row g-3">
-            <?php foreach ($evenements as $ev): ?>
-                <div class="col-md-4">
-                    <div class="gn-card" style="height: 100%; transition: transform 0.2s, box-shadow 0.2s;" 
-                         onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(26,135,203,0.15)'" 
-                         onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
-                        <?php if (!empty($ev['cover_filename'])): ?>
-                            <div style="width:100%; height:140px; overflow:hidden; border-radius: 0.5rem 0.5rem 0 0;">
-                                <img src="uploads/events/<?= htmlspecialchars($ev['cover_filename']) ?>" 
-                                     alt="<?= htmlspecialchars($ev['titre']) ?>" 
-                                     style="width:100%; height:100%; object-fit:cover; display:block;">
+    
+    <?php if (count($evenements) > 0): ?>
+    <!-- Panneau "Événements à venir" -->
+    <div class="gn-hero-aside" style="margin-top: 1.5rem;">
+        <div class="preparation-panel">
+            <div class="preparation-header">
+                <div class="preparation-icon">📅</div>
+                <div>
+                    <h3 class="preparation-title">Prochains événements</h3>
+                    <p class="preparation-subtitle">Découvrez les événements à venir du club...</p>
+                </div>
+            </div>
+            
+            <div class="preparation-slider">
+                <div class="preparation-track">
+                    <?php foreach ($evenements as $ev): ?>
+                    <div class="preparation-item">
+                        <div class="preparation-date">
+                            <div class="preparation-day"><?= date('d', strtotime($ev['date_evenement'])) ?></div>
+                            <div class="preparation-month"><?= strtoupper(substr(strftime('%B', strtotime($ev['date_evenement'])), 0, 3)) ?></div>
+                        </div>
+                        <div class="preparation-details">
+                            <div class="preparation-destination">
+                                <i class="bi bi-calendar-event"></i>
+                                <?= htmlspecialchars($ev['lieu']) ?>
                             </div>
-                        <?php else: ?>
-                            <div style="width:100%; height:140px; background: linear-gradient(135deg, #004b8d, #00a0c6); 
-                                        border-radius: 0.5rem 0.5rem 0 0; display: flex; align-items: center; justify-content: center;">
-                                <i class="bi bi-calendar-event" style="font-size: 3rem; color: rgba(255,255,255,0.3);"></i>
-                            </div>
-                        <?php endif; ?>
-                        
-                        <div style="padding: 1rem;">
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="badge" style="background-color: #9c27b0; font-size: 0.75rem;">
-                                    <?= htmlspecialchars(ucfirst($ev['type'])) ?>
-                                </span>
-                            </div>
-                            
-                            <h5 style="margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 600; color: #1a1a1a; 
-                                       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; 
-                                       overflow: hidden; min-height: 2.5rem;">
-                                <?= htmlspecialchars($ev['titre']) ?>
-                            </h5>
-                            
-                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.5rem;">
-                                <i class="bi bi-calendar3"></i>
-                                <strong>
-                                    <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
-                                        Du <?= date('d/m/Y', strtotime($ev['date_evenement'])) ?><br>
-                                        au <?= date('d/m/Y', strtotime($ev['date_fin'])) ?>
-                                    <?php else: ?>
-                                        <?= date('d/m/Y à H:i', strtotime($ev['date_evenement'])) ?>
-                                    <?php endif; ?>
-                                </strong>
-                            </div>
-                            
-                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 0.75rem;">
-                                <i class="bi bi-geo-alt"></i> <?= htmlspecialchars($ev['lieu']) ?>
-                            </div>
-                            
-                            <div style="padding-top: 0.75rem; border-top: 1px solid #eee; font-size: 0.8rem; color: #888;">
-                                <i class="bi bi-people"></i> <?= (int)($ev['confirmees'] ?? 0) ?> inscrit(s)
-                                <?php if (($ev['total_accompagnants'] ?? 0) > 0): ?>
-                                    + <?= (int)$ev['total_accompagnants'] ?> accompagnant(s)
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div style="margin-top: 1rem;">
-                                <a href="evenement_inscription_detail.php?id=<?= $ev['id'] ?>" 
-                                   class="btn btn-sm btn-primary w-100">
-                                    <i class="bi bi-info-circle"></i> Voir les détails
-                                </a>
-                            </div>
+                            <div class="preparation-title-small"><?= htmlspecialchars($ev['titre']) ?></div>
+                            <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
+                                <div style="font-size: 0.7rem; color: #9c27b0; margin-top: 0.25rem;">
+                                    <i class="bi bi-arrow-right"></i> jusqu'au <?= date('d/m', strtotime($ev['date_fin'])) ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="preparation-status">
+                            <span class="badge" style="background-color: #9c27b0; font-size: 0.7rem;">
+                                <?= htmlspecialchars(ucfirst($ev['type'])) ?>
+                            </span>
                         </div>
                     </div>
+                    <?php endforeach; ?>
+                    
+                    <!-- Dupliquer pour le défilement infini -->
+                    <?php foreach ($evenements as $ev): ?>
+                    <div class="preparation-item">
+                        <div class="preparation-date">
+                            <div class="preparation-day"><?= date('d', strtotime($ev['date_evenement'])) ?></div>
+                            <div class="preparation-month"><?= strtoupper(substr(strftime('%B', strtotime($ev['date_evenement'])), 0, 3)) ?></div>
+                        </div>
+                        <div class="preparation-details">
+                            <div class="preparation-destination">
+                                <i class="bi bi-calendar-event"></i>
+                                <?= htmlspecialchars($ev['lieu']) ?>
+                            </div>
+                            <div class="preparation-title-small"><?= htmlspecialchars($ev['titre']) ?></div>
+                            <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
+                                <div style="font-size: 0.7rem; color: #9c27b0; margin-top: 0.25rem;">
+                                    <i class="bi bi-arrow-right"></i> jusqu'au <?= date('d/m', strtotime($ev['date_fin'])) ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="preparation-status">
+                            <span class="badge" style="background-color: #9c27b0; font-size: 0.7rem;">
+                                <?= htmlspecialchars(ucfirst($ev['type'])) ?>
+                            </span>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
-            <?php endforeach; ?>
+            </div>
+            
+            <div class="preparation-footer">
+                <a href="evenements_list.php" style="color: inherit; text-decoration: none;">
+                    <i class="bi bi-arrow-right-circle me-1"></i>
+                    Voir tous les événements
+                </a>
+            </div>
         </div>
     </div>
+    <?php endif; ?>
 </div>
-<?php endif; ?>
 
 <!-- Carte de France avec les sorties -->
 <?php
