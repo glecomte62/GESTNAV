@@ -229,23 +229,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $version = mb_convert_encoding($version, 'UTF-8', 'auto');
             $date = mb_convert_encoding($date, 'UTF-8', 'auto');
             
-            // Créer un message ultra-simplifié SANS détails (utilisateurs non techniques)
+            // Créer un résumé avec grandes lignes (3-5 points max, sans détails techniques)
             $totalAdded = count($allAddedItems);
             $totalChanged = count($allChangedItems);
             $totalFixed = count($allFixedItems);
-            $totalItems = $totalAdded + $totalChanged + $totalFixed;
             
-            // Message simple sans liste de fonctionnalités
-            $sectionsHtml = '<div style="background: linear-gradient(135deg, #e0f2fe, #dbeafe); padding: 1.5rem; border-radius: 10px; text-align: center; border: 2px solid #3b82f6;">';
-            $sectionsHtml .= '<p style="margin: 0; font-size: 1.2rem; color: #1e3a8a; font-weight: 600;">Votre application évolue pour mieux vous servir !</p>';
-            $sectionsHtml .= '<p style="margin: 1rem 0 0; font-size: 1rem; color: #1e40af; line-height: 1.6;">';
-            $sectionsHtml .= 'De nouvelles fonctionnalités ont été ajoutées, l\'interface a été améliorée et plusieurs bugs ont été corrigés.';
-            $sectionsHtml .= '</p>';
+            // Extraire les grandes lignes (premières phrases uniquement)
+            $highlights = [];
+            
+            // Limiter à 3 nouveautés maximum
+            foreach (array_slice($allAddedItems, 0, 3) as $item) {
+                $firstSentence = explode(':', $item)[0];
+                $firstSentence = strip_tags($firstSentence);
+                if (!empty(trim($firstSentence)) && strlen($firstSentence) < 100) {
+                    $highlights[] = $firstSentence;
+                }
+            }
+            
+            // Résumé visuel
+            $sectionsHtml = '<div style="background: linear-gradient(135deg, #e0f2fe, #dbeafe); padding: 1.5rem; border-radius: 10px; border: 2px solid #3b82f6;">';
+            $sectionsHtml .= '<p style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #1e3a8a; font-weight: 600; text-align: center;">✨ Quoi de neuf ?</p>';
+            
+            if (!empty($highlights)) {
+                $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; color: #1e40af; line-height: 1.8;">';
+                foreach ($highlights as $highlight) {
+                    $sectionsHtml .= '<li>' . htmlspecialchars($highlight) . '</li>';
+                }
+                $sectionsHtml .= '</ul>';
+            }
+            
+            if ($totalChanged > 0 || $totalFixed > 0) {
+                $sectionsHtml .= '<p style="margin: 1rem 0 0 0; font-size: 0.95rem; color: #1e40af; text-align: center;">';
+                $sectionsHtml .= '+ des améliorations et corrections diverses';
+                $sectionsHtml .= '</p>';
+            }
             $sectionsHtml .= '</div>';
             
             $sectionsHtml .= '<div style="margin-top: 1.5rem; padding: 1.25rem; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">';
             $sectionsHtml .= '<p style="margin: 0; color: #92400e; font-size: 1rem; line-height: 1.6;">';
-            $sectionsHtml .= '💡 <strong>Connectez-vous pour découvrir les nouveautés par vous-même !</strong>';
+            $sectionsHtml .= '💡 <strong>Connectez-vous pour découvrir toutes les nouveautés !</strong>';
             $sectionsHtml .= '</p>';
             $sectionsHtml .= '</div>';
             
