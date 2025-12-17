@@ -52,6 +52,15 @@ $actionLabels = [
 
 include 'header.php';
 ?>
+<style>
+.table-row-clickable:hover {
+    background-color: #f0f9ff !important;
+    transition: background-color 0.2s;
+}
+.table-row-clickable {
+    cursor: pointer;
+}
+</style>
 <div class="container mt-3">
     <h2 class="mb-3">Logs des opérations</h2>
 
@@ -84,8 +93,30 @@ include 'header.php';
                 </tr>
             </thead>
             <tbody>
-            <?php foreach ($rows as $r): ?>
-                <tr>
+            <?php foreach ($rows as $r): 
+                // Déterminer le lien selon l'action
+                $link = null;
+                $details = $r['details'] ?? '';
+                
+                // Extraire les IDs des détails
+                if (preg_match('/sortie_id[:\s=]+(\d+)/i', $details, $m)) {
+                    $sortieId = $m[1];
+                    if (in_array($r['action'], ['sortie_inscription', 'sortie_create', 'sortie_update', 'sortie_inscription_duplicate'])) {
+                        $link = "sortie_detail.php?id=$sortieId";
+                    }
+                } elseif (preg_match('/event_id[:\s=]+(\d+)/i', $details, $m)) {
+                    $eventId = $m[1];
+                    $link = "evenement_detail.php?id=$eventId";
+                } elseif (preg_match('/user_id[:\s=]+(\d+)/i', $details, $m) && !preg_match('/sortie_id|event_id/', $details)) {
+                    $userId = $m[1];
+                    $link = "editer_membre.php?id=$userId";
+                }
+                
+                $cursorStyle = $link ? 'cursor: pointer;' : '';
+                $rowClass = $link ? 'table-row-clickable' : '';
+                $onClick = $link ? "onclick=\"window.location.href='$link'\"" : '';
+            ?>
+                <tr class="<?= $rowClass ?>" style="<?= $cursorStyle ?>" <?= $onClick ?>>
                     <td style="white-space: nowrap;"><?= htmlspecialchars($r['created_at']) ?></td>
                     <td><?= htmlspecialchars($r['nom']) ?></td>
                     <td><?= htmlspecialchars($r['prenom']) ?></td>
@@ -94,6 +125,9 @@ include 'header.php';
                     <td><code><?= htmlspecialchars($r['ip_address']) ?></code></td>
                     <td style="max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                         <?= htmlspecialchars($r['details'] ?? '') ?>
+                        <?php if ($link): ?>
+                            <i class="bi bi-box-arrow-up-right ms-2" style="font-size: 0.8rem; color: #6b7280;"></i>
+                        <?php endif; ?>
                     </td>
                 </tr>
             <?php endforeach; ?>
