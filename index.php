@@ -307,73 +307,66 @@ try {
     <?php if (count($evenements) > 0): ?>
     <!-- Panneau "Événements à venir" -->
     <div class="gn-hero-aside" style="margin-top: 1.5rem;">
-        <div class="preparation-panel">
-            <div class="preparation-header">
-                <div class="preparation-icon">📅</div>
+        <div class="preparation-panel" style="padding: 1rem;">
+            <div class="preparation-header" style="padding-bottom: 0.75rem;">
+                <div class="preparation-icon" style="width: 2rem; height: 2rem; font-size: 1rem;">📅</div>
                 <div>
-                    <h3 class="preparation-title">Prochains événements</h3>
-                    <p class="preparation-subtitle">Découvrez les événements à venir du club...</p>
+                    <h3 class="preparation-title" style="font-size: 1rem; margin-bottom: 0.25rem;">Prochains événements</h3>
+                    <p class="preparation-subtitle" style="font-size: 0.75rem;">Découvrez les événements à venir du club...</p>
                 </div>
             </div>
             
-            <div class="preparation-slider">
-                <div class="preparation-track">
+            <div style="overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: thin;">
+                <div style="display: flex; gap: 0.75rem; padding: 0.5rem 0;">
                     <?php foreach ($evenements as $ev): ?>
-                    <div class="preparation-item">
-                        <div class="preparation-date">
-                            <div class="preparation-day"><?= date('d', strtotime($ev['date_evenement'])) ?></div>
-                            <div class="preparation-month"><?= strtoupper(substr(strftime('%B', strtotime($ev['date_evenement'])), 0, 3)) ?></div>
-                        </div>
-                        <div class="preparation-details">
-                            <div class="preparation-destination">
-                                <i class="bi bi-calendar-event"></i>
-                                <?= htmlspecialchars($ev['lieu']) ?>
-                            </div>
-                            <div class="preparation-title-small"><?= htmlspecialchars($ev['titre']) ?></div>
-                            <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
-                                <div style="font-size: 0.7rem; color: #9c27b0; margin-top: 0.25rem;">
-                                    <i class="bi bi-arrow-right"></i> jusqu'au <?= date('d/m', strtotime($ev['date_fin'])) ?>
+                    <a href="evenement_inscription_detail.php?id=<?= $ev['id'] ?>" 
+                       style="text-decoration: none; color: inherit; flex-shrink: 0;">
+                        <div style="background: white; border-radius: 0.75rem; padding: 0.75rem 1rem; 
+                                    box-shadow: 0 2px 4px rgba(0,0,0,0.08); border: 1px solid #e5e7eb;
+                                    width: 280px; transition: all 0.2s; cursor: pointer;
+                                    display: flex; align-items: center; gap: 0.75rem;"
+                             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(26,135,203,0.15)'"
+                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.08)'">
+                            <div style="background: linear-gradient(135deg, #004b8d, #00a0c6); border-radius: 0.5rem; 
+                                        padding: 0.5rem; text-align: center; min-width: 50px;">
+                                <div style="color: white; font-weight: 700; font-size: 1.25rem; line-height: 1;">
+                                    <?= date('d', strtotime($ev['date_evenement'])) ?>
                                 </div>
-                            <?php endif; ?>
-                        </div>
-                        <div class="preparation-status">
-                            <span class="badge" style="background-color: #9c27b0; font-size: 0.7rem;">
-                                <?= htmlspecialchars(ucfirst($ev['type'])) ?>
-                            </span>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
-                    
-                    <!-- Dupliquer pour le défilement infini -->
-                    <?php foreach ($evenements as $ev): ?>
-                    <div class="preparation-item">
-                        <div class="preparation-date">
-                            <div class="preparation-day"><?= date('d', strtotime($ev['date_evenement'])) ?></div>
-                            <div class="preparation-month"><?= strtoupper(substr(strftime('%B', strtotime($ev['date_evenement'])), 0, 3)) ?></div>
-                        </div>
-                        <div class="preparation-details">
-                            <div class="preparation-destination">
-                                <i class="bi bi-calendar-event"></i>
-                                <?= htmlspecialchars($ev['lieu']) ?>
-                            </div>
-                            <div class="preparation-title-small"><?= htmlspecialchars($ev['titre']) ?></div>
-                            <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
-                                <div style="font-size: 0.7rem; color: #9c27b0; margin-top: 0.25rem;">
-                                    <i class="bi bi-arrow-right"></i> jusqu'au <?= date('d/m', strtotime($ev['date_fin'])) ?>
+                                <div style="color: rgba(255,255,255,0.9); font-size: 0.65rem; text-transform: uppercase; font-weight: 600;">
+                                    <?= strtoupper(substr(strftime('%B', strtotime($ev['date_evenement'])), 0, 3)) ?>
                                 </div>
-                            <?php endif; ?>
+                            </div>
+                            <div style="flex: 1; min-width: 0;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                    <span class="badge" style="background-color: #9c27b0; font-size: 0.65rem; padding: 0.2rem 0.5rem;">
+                                        <?= htmlspecialchars(ucfirst($ev['type'])) ?>
+                                    </span>
+                                </div>
+                                <div style="font-weight: 600; font-size: 0.875rem; color: #1a1a1a; margin-bottom: 0.25rem;
+                                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    <?= htmlspecialchars($ev['titre']) ?>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #666; margin-bottom: 0.25rem;">
+                                    <i class="bi bi-geo-alt" style="font-size: 0.7rem;"></i>
+                                    <?= htmlspecialchars($ev['lieu']) ?>
+                                </div>
+                                <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
+                                    <div style="font-size: 0.65rem; color: #9c27b0; font-weight: 600;">
+                                        <i class="bi bi-arrow-right"></i> jusqu'au <?= date('d/m', strtotime($ev['date_fin'])) ?>
+                                    </div>
+                                <?php else: ?>
+                                    <div style="font-size: 0.65rem; color: #888;">
+                                        <?= date('H:i', strtotime($ev['date_evenement'])) ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div class="preparation-status">
-                            <span class="badge" style="background-color: #9c27b0; font-size: 0.7rem;">
-                                <?= htmlspecialchars(ucfirst($ev['type'])) ?>
-                            </span>
-                        </div>
-                    </div>
+                    </a>
                     <?php endforeach; ?>
                 </div>
             </div>
             
-            <div class="preparation-footer">
+            <div class="preparation-footer" style="padding-top: 0.75rem; font-size: 0.8rem;">
                 <a href="evenements_list.php" style="color: inherit; text-decoration: none;">
                     <i class="bi bi-arrow-right-circle me-1"></i>
                     Voir tous les événements
