@@ -229,34 +229,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $version = mb_convert_encoding($version, 'UTF-8', 'auto');
             $date = mb_convert_encoding($date, 'UTF-8', 'auto');
             
-            // Construire un résumé narratif ultra-simplifié (pour utilisateurs non techniques)
-            $sectionsHtml = '';
-            
-            // Créer un résumé en format texte simple, pas de liste technique
+            // Créer un message ultra-simplifié SANS détails (utilisateurs non techniques)
             $totalAdded = count($allAddedItems);
             $totalChanged = count($allChangedItems);
             $totalFixed = count($allFixedItems);
+            $totalItems = $totalAdded + $totalChanged + $totalFixed;
             
-            if ($totalAdded > 0) {
-                $sectionsHtml .= '<div style="padding: 1rem; background: #ecfdf5; border-left: 3px solid #10b981; border-radius: 6px; margin-bottom: 0.75rem;">';
-                $sectionsHtml .= '<p style="margin: 0; color: #065f46; font-weight: 600;">✨ ' . $totalAdded . ' nouvelle' . ($totalAdded > 1 ? 's' : '') . ' fonctionnalité' . ($totalAdded > 1 ? 's' : '') . '</p>';
-                $sectionsHtml .= '<p style="margin: 0.5rem 0 0; color: #047857; font-size: 0.95rem; line-height: 1.5;">L\'application s\'enrichit de nouvelles possibilités pour vous faciliter la vie au quotidien.</p>';
-                $sectionsHtml .= '</div>';
-            }
+            // Message simple sans liste de fonctionnalités
+            $sectionsHtml = '<div style="background: linear-gradient(135deg, #e0f2fe, #dbeafe); padding: 1.5rem; border-radius: 10px; text-align: center; border: 2px solid #3b82f6;">';
+            $sectionsHtml .= '<p style="margin: 0; font-size: 1.2rem; color: #1e3a8a; font-weight: 600;">Votre application évolue pour mieux vous servir !</p>';
+            $sectionsHtml .= '<p style="margin: 1rem 0 0; font-size: 1rem; color: #1e40af; line-height: 1.6;">';
+            $sectionsHtml .= 'De nouvelles fonctionnalités ont été ajoutées, l\'interface a été améliorée et plusieurs bugs ont été corrigés.';
+            $sectionsHtml .= '</p>';
+            $sectionsHtml .= '</div>';
             
-            if ($totalChanged > 0) {
-                $sectionsHtml .= '<div style="padding: 1rem; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 6px; margin-bottom: 0.75rem;">';
-                $sectionsHtml .= '<p style="margin: 0; color: #92400e; font-weight: 600;">🔄 ' . $totalChanged . ' amélioration' . ($totalChanged > 1 ? 's' : '') . '</p>';
-                $sectionsHtml .= '<p style="margin: 0.5rem 0 0; color: #b45309; font-size: 0.95rem; line-height: 1.5;">Des ajustements pour rendre votre expérience encore plus fluide et agréable.</p>';
-                $sectionsHtml .= '</div>';
-            }
-            
-            if ($totalFixed > 0) {
-                $sectionsHtml .= '<div style="padding: 1rem; background: #fee2e2; border-left: 3px solid #ef4444; border-radius: 6px; margin-bottom: 0.75rem;">';
-                $sectionsHtml .= '<p style="margin: 0; color: #991b1b; font-weight: 600;">🐛 ' . $totalFixed . ' correction' . ($totalFixed > 1 ? 's' : '') . '</p>';
-                $sectionsHtml .= '<p style="margin: 0.5rem 0 0; color: #b91c1c; font-size: 0.95rem; line-height: 1.5;">Des petits bugs corrigés pour garantir un fonctionnement optimal.</p>';
-                $sectionsHtml .= '</div>';
-            }
+            $sectionsHtml .= '<div style="margin-top: 1.5rem; padding: 1.25rem; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">';
+            $sectionsHtml .= '<p style="margin: 0; color: #92400e; font-size: 1rem; line-height: 1.6;">';
+            $sectionsHtml .= '💡 <strong>Connectez-vous pour découvrir les nouveautés par vous-même !</strong>';
+            $sectionsHtml .= '</p>';
+            $sectionsHtml .= '</div>';
             
             // Nettoyer le HTML
             $sectionsHtml = str_replace('<code>', '<code style="background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; color: #d97706;">', $sectionsHtml);
@@ -264,26 +255,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // S'assurer que le HTML des sections est en UTF-8
             $sectionsHtml = mb_convert_encoding($sectionsHtml, 'UTF-8', 'auto');
             
-            // Créer un résumé statistique simple et visuel
-            $totalItems = count($allAddedItems) + count($allChangedItems) + count($allFixedItems);
-            $statsHtml = '<div style="background: linear-gradient(135deg, #e0f2fe, #bae6fd); padding: 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center; border: 2px solid #0ea5e9;">';
-            $statsHtml .= '<p style="margin: 0; font-size: 1.1rem; color: #0c4a6e; font-weight: 600;">';
+            // Statistiques simples (sans détails)
+            $totalItems = $totalAdded + $totalChanged + $totalFixed;
+            $statsHtml = '<div style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center; border: 2px solid #60a5fa;">';
+            $statsHtml .= '<p style="margin: 0; font-size: 1rem; color: #1e3a8a; font-weight: 600;">';
             if ($startIndex > 0) {
                 $nbVersions = $startIndex + 1;
-                $statsHtml .= '🎉 ' . $nbVersions . ' mise' . ($nbVersions > 1 ? 's' : '') . ' à jour avec <span style="font-size: 1.3rem; color: #004b8d;">' . $totalItems . '</span> amélioration' . ($totalItems > 1 ? 's' : '') . ' !';
+                $statsHtml .= '🚀 ' . $nbVersions . ' mise' . ($nbVersions > 1 ? 's' : '') . ' à jour effectuée' . ($nbVersions > 1 ? 's' : '') . ' !';
             } else {
-                $statsHtml .= '🎉 <span style="font-size: 1.3rem; color: #004b8d;">' . $totalItems . '</span> amélioration' . ($totalItems > 1 ? 's' : '') . ' dans cette version !';
+                $statsHtml .= '🚀 Nouvelle mise à jour disponible !';
             }
             $statsHtml .= '</p></div>';
             
-            // Message d'introduction personnalisé selon le nombre de versions
-            $introMessage = '';
-            if ($startIndex > 0) {
-                $nbVersions = $startIndex + 1;
-                $introMessage = "Votre application GESTNAV a beaucoup évolué ! Découvrez ci-dessous un résumé des changements apportés :";
-            } else {
-                $introMessage = "Votre application GESTNAV vient d'être mise à jour ! Voici ce qui a changé :";
-            }
+            // Message d'introduction simple
+            $introMessage = "Votre application GESTNAV a été mise à jour pour améliorer votre expérience.";
             
             // Récupérer tous les membres actifs
             $stmt = $pdo->query("SELECT id, email, prenom, nom FROM users WHERE actif = 1 AND email IS NOT NULL AND email != ''");
@@ -316,20 +301,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $htmlMessage .= '<div style="padding: 2rem; background: white; border: 1px solid #e5e7eb; border-top: none;">';
             $htmlMessage .= '<p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Bonjour {{prenom}},</p>';
-            $htmlMessage .= '<p style="margin-bottom: 1.5rem;">' . $introMessage . '</p>';
+            $htmlMessage .= '<p style="margin-bottom: 1.5rem; font-size: 1rem; color: #374151;">' . $introMessage . '</p>';
             $htmlMessage .= $statsHtml;
             $htmlMessage .= $sectionsHtml;
             
-            // Toujours afficher le lien vers le changelog complet
-            $htmlMessage .= '<div style="text-align: center; margin-top: 1.5rem; padding: 1rem; background: #f0f9ff; border-radius: 8px;">';
-            $htmlMessage .= '<p style="margin: 0; color: #0369a1; font-size: 0.95rem;">';
-            $htmlMessage .= '📋 Pour découvrir tous les détails techniques, consultez le ';
-            $htmlMessage .= '<a href="https://gestnav.clubulmevasion.fr/changelog.php" style="color: #0284c7; font-weight: 600; text-decoration: underline;">changelog complet</a>';
+            // Lien vers le changelog pour les curieux
+            $htmlMessage .= '<div style="text-align: center; margin-top: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">';
+            $htmlMessage .= '<p style="margin: 0; color: #6b7280; font-size: 0.9rem;">';
+            $htmlMessage .= '📋 Pour les curieux, tous les détails techniques sont disponibles sur le ';
+            $htmlMessage .= '<a href="https://gestnav.clubulmevasion.fr/changelog.php" style="color: #2563eb; font-weight: 500; text-decoration: underline;">changelog</a>';
             $htmlMessage .= '</p></div>';
             
-            $htmlMessage .= '<p style="margin-top: 2rem; font-size: 1rem; color: #065f46; background: #d1fae5; padding: 1rem; border-radius: 6px; border-left: 4px solid #10b981;">';
-            $htmlMessage .= '💡 <strong>Connectez-vous dès maintenant pour profiter de ces améliorations !</strong>';
-            $htmlMessage .= '</p>';
+            $htmlMessage .= '<p style="margin-top: 2rem; text-align: center;">';
             $htmlMessage .= '<p style="text-align: center; margin-top: 2rem;">';
             $htmlMessage .= '<a href="https://gestnav.clubulmevasion.fr" style="display:inline-block;padding:12px 24px;border-radius:6px;background-color:#004b8d;color:#ffffff;text-decoration:none;font-weight:600;">🔗 Accéder à GESTNAV</a>';
             $htmlMessage .= '</p>';
