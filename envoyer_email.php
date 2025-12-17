@@ -205,35 +205,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $version = mb_convert_encoding($version, 'UTF-8', 'auto');
             $date = mb_convert_encoding($date, 'UTF-8', 'auto');
             
-            // Construire les sections HTML avec tous les items collectés
+            // Construire un condensé user-friendly des modifications
             $sectionsHtml = '';
+            
+            // Fonction pour créer un condensé intelligent
+            function createCondensedSummary($items, $maxItems = 5) {
+                if (empty($items)) return ['items' => [], 'more' => 0];
+                
+                // Si peu d'items, tout afficher
+                if (count($items) <= $maxItems) {
+                    return ['items' => $items, 'more' => 0];
+                }
+                
+                // Sinon, prendre les plus importants et compter le reste
+                $selectedItems = array_slice($items, 0, $maxItems);
+                $moreCount = count($items) - $maxItems;
+                
+                return ['items' => $selectedItems, 'more' => $moreCount];
+            }
             
             // Section Added (✨)
             if (!empty($allAddedItems)) {
+                $summary = createCondensedSummary($allAddedItems, 4);
                 $sectionsHtml .= '<h3 style="color: #10b981; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">✨ Nouveautés</h3>';
                 $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
-                foreach ($allAddedItems as $item) {
+                foreach ($summary['items'] as $item) {
                     $sectionsHtml .= '<li>' . $item . '</li>';
+                }
+                if ($summary['more'] > 0) {
+                    $sectionsHtml .= '<li style="color: #6b7280; font-style: italic;">... et ' . $summary['more'] . ' autre' . ($summary['more'] > 1 ? 's' : '') . ' nouveauté' . ($summary['more'] > 1 ? 's' : '') . '</li>';
                 }
                 $sectionsHtml .= '</ul>';
             }
             
             // Section Changed (🔄)
             if (!empty($allChangedItems)) {
+                $summary = createCondensedSummary($allChangedItems, 4);
                 $sectionsHtml .= '<h3 style="color: #f59e0b; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">🔄 Améliorations</h3>';
                 $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
-                foreach ($allChangedItems as $item) {
+                foreach ($summary['items'] as $item) {
                     $sectionsHtml .= '<li>' . $item . '</li>';
+                }
+                if ($summary['more'] > 0) {
+                    $sectionsHtml .= '<li style="color: #6b7280; font-style: italic;">... et ' . $summary['more'] . ' autre' . ($summary['more'] > 1 ? 's' : '') . ' amélioration' . ($summary['more'] > 1 ? 's' : '') . '</li>';
                 }
                 $sectionsHtml .= '</ul>';
             }
             
             // Section Fixed (🐛)
             if (!empty($allFixedItems)) {
+                $summary = createCondensedSummary($allFixedItems, 3);
                 $sectionsHtml .= '<h3 style="color: #ef4444; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1.15rem;">🐛 Corrections</h3>';
                 $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; line-height: 1.8;">';
-                foreach ($allFixedItems as $item) {
+                foreach ($summary['items'] as $item) {
                     $sectionsHtml .= '<li>' . $item . '</li>';
+                }
+                if ($summary['more'] > 0) {
+                    $sectionsHtml .= '<li style="color: #6b7280; font-style: italic;">... et ' . $summary['more'] . ' autre' . ($summary['more'] > 1 ? 's' : '') . ' correction' . ($summary['more'] > 1 ? 's' : '') . '</li>';
                 }
                 $sectionsHtml .= '</ul>';
             }
@@ -244,11 +272,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // S'assurer que le HTML des sections est en UTF-8
             $sectionsHtml = mb_convert_encoding($sectionsHtml, 'UTF-8', 'auto');
             
+            // Créer un résumé statistique
+            $totalItems = count($allAddedItems) + count($allChangedItems) + count($allFixedItems);
+            $statsHtml = '<div style="background: linear-gradient(135deg, #f0f9ff, #e0f2fe); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">';
+            $statsHtml .= '<p style="margin: 0; font-size: 0.95rem; color: #0369a1;">';
+            $statsHtml .= '<strong style="font-size: 1.2rem; color: #004b8d;">' . $totalItems . '</strong> modification' . ($totalItems > 1 ? 's' : '') . ' au total : ';
+            if (count($allAddedItems) > 0) {
+                $statsHtml .= '<span style="color: #10b981;">✨ ' . count($allAddedItems) . ' nouveauté' . (count($allAddedItems) > 1 ? 's' : '') . '</span>';
+            }
+            if (count($allChangedItems) > 0) {
+                if (count($allAddedItems) > 0) $statsHtml .= ' • ';
+                $statsHtml .= '<span style="color: #f59e0b;">🔄 ' . count($allChangedItems) . ' amélioration' . (count($allChangedItems) > 1 ? 's' : '') . '</span>';
+            }
+            if (count($allFixedItems) > 0) {
+                if (count($allAddedItems) > 0 || count($allChangedItems) > 0) $statsHtml .= ' • ';
+                $statsHtml .= '<span style="color: #ef4444;">🐛 ' . count($allFixedItems) . ' correction' . (count($allFixedItems) > 1 ? 's' : '') . '</span>';
+            }
+            $statsHtml .= '</p></div>';
+            
             // Message d'introduction personnalisé selon le nombre de versions
             $introMessage = '';
             if ($startIndex > 0) {
                 $nbVersions = $startIndex + 1;
-                $introMessage = "Nous avons le plaisir de vous présenter <strong>$nbVersions nouvelle" . ($nbVersions > 1 ? 's' : '') . " version" . ($nbVersions > 1 ? 's' : '') . "</strong> de GESTNAV ! Voici un récapitulatif de toutes les évolutions apportées depuis la version " . trim($allVersions[$startIndex][2]) . " :";
+                $introMessage = "Nous avons le plaisir de vous présenter <strong>$nbVersions nouvelle" . ($nbVersions > 1 ? 's' : '') . " version" . ($nbVersions > 1 ? 's' : '') . "</strong> de GESTNAV ! Voici les principales évolutions apportées depuis la version " . trim($allVersions[$startIndex][2]) . " :";
             } else {
                 $introMessage = "Nous sommes ravis de vous annoncer que votre application <strong>GESTNAV</strong> vient d'être mise à jour avec de nouvelles fonctionnalités et améliorations :";
             }
@@ -285,9 +331,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $htmlMessage .= '<div style="padding: 2rem; background: white; border: 1px solid #e5e7eb; border-top: none;">';
             $htmlMessage .= '<p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Bonjour {{prenom}},</p>';
             $htmlMessage .= '<p style="margin-bottom: 1.5rem;">' . $introMessage . '</p>';
+            $htmlMessage .= $statsHtml;
             $htmlMessage .= '<div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #00a0c6;">';
             $htmlMessage .= $sectionsHtml;
             $htmlMessage .= '</div>';
+            
+            // Ajouter un lien vers le changelog complet si plusieurs versions ou beaucoup de modifications
+            if ($startIndex > 0 || $totalItems > 10) {
+                $htmlMessage .= '<p style="margin-top: 1rem; font-size: 0.9rem; color: #6b7280; text-align: center;">';
+                $htmlMessage .= '📋 <a href="https://gestnav.clubulmevasion.fr/changelog.php" style="color: #0369a1; text-decoration: none;">Voir le changelog complet avec tous les détails</a>';
+                $htmlMessage .= '</p>';
+            }
+            
             $htmlMessage .= '<p style="margin-top: 2rem;">N\'hésitez pas à vous connecter pour découvrir ces nouveautés !</p>';
             $htmlMessage .= '<p style="text-align: center; margin-top: 2rem;">';
             $htmlMessage .= '<a href="https://gestnav.clubulmevasion.fr" style="display:inline-block;padding:12px 24px;border-radius:6px;background-color:#004b8d;color:#ffffff;text-decoration:none;font-weight:600;">🔗 Accéder à GESTNAV</a>';
