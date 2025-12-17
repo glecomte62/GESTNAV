@@ -179,9 +179,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($versionsToProcess as $versionIdx) {
                 $versionId = trim($allVersions[$versionIdx][1]);
                 $versionNumber = trim($allVersions[$versionIdx][2]);
+                $versionDate = trim($allVersions[$versionIdx][3]);
                 $nextVersionId = isset($allVersions[$versionIdx + 1]) ? trim($allVersions[$versionIdx + 1][1]) : null;
                 
-                $itemsByVersion[$versionNumber] = ['added' => [], 'changed' => [], 'fixed' => []];
+                $itemsByVersion[$versionNumber] = ['date' => $versionDate, 'added' => [], 'changed' => [], 'fixed' => []];
                 
                 // Extraire le bloc de cette version
                 if ($nextVersionId) {
@@ -238,51 +239,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $version = mb_convert_encoding($version, 'UTF-8', 'auto');
             $date = mb_convert_encoding($date, 'UTF-8', 'auto');
             
-            // Créer un résumé avec les gros titres et leurs descriptions
+            // Créer un résumé avec 1 item principal par version
             $totalAdded = count($allAddedItems);
             $totalChanged = count($allChangedItems);
             $totalFixed = count($allFixedItems);
             
-            // Extraire les grandes lignes avec titre et première phrase de description
             $highlights = [];
             
-            // Adapter le nombre d'items selon le nombre de versions
-            $nbVersions = count($versionsToProcess);
-            $maxItems = ($nbVersions > 1) ? min(12, $totalAdded) : 6; // Plus de versions = plus d'items (max 12)
-            
-            // Sélectionner les items en prenant équitablement de chaque version
-            $selectedItems = [];
-            if ($nbVersions > 1) {
-                // Distribuer les items par version
-                $itemsPerVersion = ceil($maxItems / $nbVersions);
-                foreach ($itemsByVersion as $versionNum => $items) {
-                    $versionItems = array_merge($items['added'], $items['changed'], $items['fixed']);
-                    foreach (array_slice($versionItems, 0, $itemsPerVersion) as $item) {
-                        if (count($selectedItems) < $maxItems) {
-                            $selectedItems[] = ['item' => $item, 'version' => $versionNum];
-                        }
+            // Pour chaque version, prendre le premier item représentatif
+            foreach ($itemsByVersion as $versionNum => $versionData) {
+                // Prendre le premier Added, sinon premier Changed, sinon premier Fixed
+                $firstItem = null;
+                if (!empty($versionData['added'])) {
+                    $firstItem = $versionData['added'][0];
+                } elseif (!empty($versionData['changed'])) {
+                    $firstItem = $versionData['changed'][0];
+                } elseif (!empty($versionData['fixed'])) {
+                    $firstItem = $versionData['fixed'][0];
+                }
+                
+                if ($firstItem) {
+                    $parts = explode(':', $firstItem, 2);
+                    $title = strip_tags($parts[0]);
+                    $desc = '';
+                    if (isset($parts[1])) {
+                        // Prendre la première phrase de description
+                        $descText = strip_tags($parts[1]);
+                        $sentences = preg_split('/(?<=[.!?])\s+/', trim($descText), 2);
+                        $desc = trim($sentences[0]);
                     }
-                }
-            } else {
-                // Une seule version : prendre les items normalement
-                foreach (array_slice($allAddedItems, 0, $maxItems) as $item) {
-                    $selectedItems[] = ['item' => $item, 'version' => $version];
-                }
-            }
-            
-            foreach ($selectedItems as $data) {
-                $item = $data['item'];
-                $parts = explode(':', $item, 2);
-                $title = strip_tags($parts[0]);
-                $desc = '';
-                if (isset($parts[1])) {
-                    // Prendre la première phrase de description
-                    $descText = strip_tags($parts[1]);
-                    $sentences = preg_split('/(?<=[.!?])\s+/', trim($descText), 2);
-                    $desc = trim($sentences[0]);
-                }
-                if (!empty(trim($title))) {
-                    $highlights[] = ['title' => $title, 'desc' => $desc, 'version' => $data['version']];
+                    if (!empty(trim($title))) {
+                        $highlights[] = [
+                            'version' => $versionNum,
+                            'date' => $versionData['date'],
+                            'title' => $title,
+                            'desc' => $desc
+                        ];
+                    }
                 }
             }
             
@@ -292,19 +285,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (!empty($highlights)) {
                 foreach ($highlights as $item) {
-                    $sectionsHtml .= '<div style="margin-bottom: 1rem;">';
+                    $sectionsHtml .= '<div style="margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #bfdbfe;">';
+                    $sectionsHtml .= '<div style="font-weight: 600; color: #0369a1; font-size: 1rem; margin-bottom: 0.25rem;">';
+                    $sectionsHtml .= '[' . htmlspecialchars($item['version']) . '] <span style="font-weight: 400; color: #64748b; font-size: 0.85rem;">' . htmlspecialchars($item['date']) . '</span>';
+                    $sectionsHtml .= '</div>';
                     $sectionsHtml .= '<strong style="color: #1e3a8a;">' . htmlspecialchars($item['title']) . '</strong>';
-                    
-                    // Afficher la version si plusieurs versions sélectionnées
-                    if ($nbVersions > 1 && isset($item['version'])) {
-                        $sectionsHtml .= ' <span style="font-size: 0.8rem; color: #64748b; font-style: italic;">(v' . htmlspecialchars($item['version']) . ')</span>';
-                    }
-                    
                     if (!empty($item['desc'])) {
                         $sectionsHtml .= '<br><span style="color: #1e40af; font-size: 0.95rem;">' . htmlspecialchars($item['desc']) . '</span>';
                     }
                     $sectionsHtml .= '</div>';
                 }
+                // Retirer la bordure du dernier élément
+                $sectionsHtml = str_replace('border-bottom: 1px solid #bfdbfe;">' . "\n" . '</div>' . "\n" . '</div>', '">' . "\n" . '</div>' . "\n" . '</div>', $sectionsHtml);
             }
             
             if ($totalChanged > 0 || $totalFixed > 0) {
