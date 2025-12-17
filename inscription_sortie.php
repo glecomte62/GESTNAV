@@ -52,7 +52,7 @@ if ($sortie_id > 0) {
             $stmtIns = $pdo->prepare("\n                INSERT INTO sortie_inscriptions (sortie_id, user_id, action_token) \n                VALUES (?, ?, ?)\n            ");
             $stmtIns->execute([$sortie_id, $user_id, $action_token]);
             // Log opération (inscription à une sortie)
-            gn_log_current_user_operation($pdo, 'sortie_inscription', 'Inscription effectuée');
+            gn_log_current_user_operation($pdo, 'sortie_inscription', 'Inscription effectuée', $sortie_id);
 
             $message = "Votre inscription à la sortie « " . htmlspecialchars($sortie['titre']) . " » a bien été enregistrée. L'administrateur la validera et vous enverrera les détails par mail.";
             
@@ -61,7 +61,7 @@ if ($sortie_id > 0) {
             if ($e->getCode() === '23000') {
                 $message = "Vous êtes déjà inscrit(e) à cette sortie.";
                 // Optionnel: tentative de double inscription
-                gn_log_current_user_operation($pdo, 'sortie_inscription_duplicate', 'Déjà inscrit(e)');
+                gn_log_current_user_operation($pdo, 'sortie_inscription_duplicate', 'Déjà inscrit(e)', $sortie_id);
             } else {
                 $error = true;
                 $message = "Une erreur est survenue lors de votre inscription.";

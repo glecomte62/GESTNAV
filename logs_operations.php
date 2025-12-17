@@ -94,22 +94,17 @@ include 'header.php';
             </thead>
             <tbody>
             <?php foreach ($rows as $r): 
-                // Déterminer le lien selon l'action
+                // Déterminer le lien selon l'action et entity_id
                 $link = null;
-                $details = $r['details'] ?? '';
+                $entityId = $r['entity_id'] ?? null;
                 
-                // Extraire les IDs des détails
-                if (preg_match('/sortie_id[:\s=]+(\d+)/i', $details, $m)) {
-                    $sortieId = $m[1];
+                if ($entityId) {
+                    // Utiliser entity_id pour créer le lien approprié
                     if (in_array($r['action'], ['sortie_inscription', 'sortie_create', 'sortie_update', 'sortie_inscription_duplicate'])) {
-                        $link = "sortie_detail.php?id=$sortieId";
+                        $link = "sortie_detail.php?id=$entityId";
+                    } elseif (in_array($r['action'], ['event_register', 'event_update', 'event_cancel', 'event_update_admin', 'event_cover_delete'])) {
+                        $link = "evenement_detail.php?id=$entityId";
                     }
-                } elseif (preg_match('/event_id[:\s=]+(\d+)/i', $details, $m)) {
-                    $eventId = $m[1];
-                    $link = "evenement_detail.php?id=$eventId";
-                } elseif (preg_match('/user_id[:\s=]+(\d+)/i', $details, $m) && !preg_match('/sortie_id|event_id/', $details)) {
-                    $userId = $m[1];
-                    $link = "editer_membre.php?id=$userId";
                 }
                 
                 $cursorStyle = $link ? 'cursor: pointer;' : '';

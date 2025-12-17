@@ -18,12 +18,13 @@ function gn_get_client_ip(): string {
  * @param string $prenom
  * @param string $action
  * @param string|null $details
+ * @param int|null $entityId ID de l'entité concernée (sortie, événement, membre...)
  */
-function gn_log_operation(PDO $pdo, int $userId, string $nom, string $prenom, string $action, ?string $details = null): void {
+function gn_log_operation(PDO $pdo, int $userId, string $nom, string $prenom, string $action, ?string $details = null, ?int $entityId = null): void {
     try {
         $ip = gn_get_client_ip();
-        $stmt = $pdo->prepare('INSERT INTO operation_logs (user_id, nom, prenom, action, details, ip_address, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
-        $stmt->execute([$userId, $nom, $prenom, $action, $details, $ip]);
+        $stmt = $pdo->prepare('INSERT INTO operation_logs (user_id, nom, prenom, action, entity_id, details, ip_address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())');
+        $stmt->execute([$userId, $nom, $prenom, $action, $entityId, $details, $ip]);
     } catch (Throwable $e) {
         // Ne pas interrompre le flux applicatif en cas d'échec de log
     }
@@ -32,12 +33,12 @@ function gn_log_operation(PDO $pdo, int $userId, string $nom, string $prenom, st
 /**
  * Enregistre une opération pour l'utilisateur courant (depuis la session).
  */
-function gn_log_current_user_operation(PDO $pdo, string $action, ?string $details = null): void {
+function gn_log_current_user_operation(PDO $pdo, string $action, ?string $details = null, ?int $entityId = null): void {
     if (!isset($_SESSION['user_id'])) {
         return; // uniquement pour utilisateurs connectés
     }
     $userId = (int)($_SESSION['user_id'] ?? 0);
     $nom = (string)($_SESSION['nom'] ?? '');
     $prenom = (string)($_SESSION['prenom'] ?? '');
-    gn_log_operation($pdo, $userId, $nom, $prenom, $action, $details);
+    gn_log_operation($pdo, $userId, $nom, $prenom, $action, $details, $entityId);
 }
