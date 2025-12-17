@@ -149,8 +149,11 @@ try {
     // Extraire les grandes lignes avec titre et première phrase de description
     $highlights = [];
     
-    // Limiter à 5-6 nouveautés maximum
-    foreach (array_slice($allAddedItems, 0, 6) as $item) {
+    // Adapter le nombre d'items selon le nombre de versions
+    $nbVersions = count($versionsToProcess);
+    $maxItems = ($nbVersions > 1) ? min(12, $totalAdded) : 6; // Plus de versions = plus d'items (max 12)
+    
+    foreach (array_slice($allAddedItems, 0, $maxItems) as $item) {
         $parts = explode(':', $item, 2);
         $title = strip_tags($parts[0]);
         $desc = '';
