@@ -145,6 +145,49 @@ require_login();
     <h1 class="changelog-title">Historique</h1>
     <p class="changelog-subtitle">Suivi des mises a jour de GESTNAV ULM</p>
 
+    <!-- Version 2.4.3 -->
+    <div class="changelog-version-block">
+        <div class="changelog-version-header">
+            <span class="version-number">[2.4.3]</span>
+            <span class="version-date">2025-12-17</span>
+        </div>
+
+        <div class="changelog-section-added">
+            <h3 class="changelog-section-type">Added</h3>
+            <ul class="changelog-items">
+                <li><strong>Logs opérations cliquables</strong>: Les lignes de <code>logs_operations.php</code> sont maintenant cliquables pour accéder directement à l'entité concernée.</li>
+                <li>Ajout de la colonne <code>entity_id</code> dans la table <code>operation_logs</code> pour stocker l'ID de l'entité (sortie, machine, etc.).</li>
+                <li>Ajout de l'index <code>idx_entity_id</code> sur la colonne <code>entity_id</code> pour optimiser les requêtes.</li>
+                <li>Mise à jour de <code>utils/activity_log.php</code> pour accepter le paramètre <code>$entityId</code> dans les fonctions de logging.</li>
+                <li>Effet visuel au survol des lignes cliquables avec curseur pointer et fond bleu clair.</li>
+            </ul>
+        </div>
+
+        <div class="changelog-section-changed">
+            <h3 class="changelog-section-type">Changed</h3>
+            <ul class="changelog-items">
+                <li><strong>Email d'affectation sortie</strong>: Ajout du nom du coéquipier dans l'email d'affectation.</li>
+                <li>Requête SQL avec LEFT JOIN sur <code>sortie_assignations</code> pour récupérer le coéquipier de la même machine.</li>
+                <li>Affichage du coéquipier avec emoji 👥 dans les versions HTML et texte de l'email.</li>
+                <li><strong>Email des nouveautés</strong>: Refonte complète du système d'envoi des nouveautés de l'application.</li>
+                <li>Sélecteur de version : permet de choisir depuis quelle version générer l'email cumulatif.</li>
+                <li>Affichage d'**un item principal par version** avec format <code>[version] date</code>.</li>
+                <li>Chaque version affiche son premier élément Added, Changed ou Fixed le plus représentatif.</li>
+                <li>Design amélioré avec bordures entre les versions et mise en page claire.</li>
+                <li>Matching de version flexible : "1.5" trouve automatiquement "1.5.0".</li>
+                <li>Suppression du filtre admin trop restrictif pour montrer toutes les nouveautés pertinentes.</li>
+            </ul>
+        </div>
+
+        <div class="changelog-section-fixed">
+            <h3 class="changelog-section-type">Fixed</h3>
+            <ul class="changelog-items">
+                <li>Correction du bug où la sélection de version dans l'envoi des nouveautés ne changeait pas le contenu de l'email.</li>
+                <li>Synchronisation parfaite entre <code>envoyer_email.php</code> et <code>preview_changelog_email.php</code>.</li>
+            </ul>
+        </div>
+    </div>
+
     <!-- Version 2.4.2 -->
     <div class="changelog-version-block">
         <div class="changelog-version-header">
