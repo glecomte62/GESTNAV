@@ -198,6 +198,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['annuler'])) {
                         </p>
                     <?php endif; ?>
                     
+                    <?php if (!empty($evt['url'])): ?>
+                        <p><strong>Lien :</strong><br>
+                            <a href="<?= htmlspecialchars($evt['url']) ?>" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary mt-2">
+                                <i class="bi bi-link-45deg"></i> Accéder au lien
+                            </a>
+                        </p>
+                    <?php endif; ?>
+                    
                     <?php if ($evt['description']): ?>
                         <p><strong>Description :</strong><br><?= nl2br(htmlspecialchars($evt['description'])) ?></p>
                     <?php endif; ?>

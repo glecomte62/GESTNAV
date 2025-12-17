@@ -44,6 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if (empty($titre)) {
         $flash = ['type' => 'error', 'text' => 'Le titre est obligatoire.'];
+    } elseif (empty($_FILES['photo']['name'])) {
+        $flash = ['type' => 'error', 'text' => 'La photo est obligatoire.'];
     } else {
         try {
             $photo_filename = null;
@@ -385,9 +387,9 @@ require 'header.php';
             <div class="section-title">Photo Illustration</div>
 
             <div class="form-group">
-                <label>Photo (optionnel)</label>
-                <input type="file" name="photo" accept="image/jpeg,image/png,image/webp">
-                <small>JPG, PNG ou WebP (max 10MB) - Photo du lieu ou de l aerodromes</small>
+                <label>Photo (obligatoire) *</label>
+                <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+                <small>JPG, PNG ou WebP (max 10MB) - Photo du lieu ou de l'aérodrome</small>
             </div>
 
             <div class="button-group">

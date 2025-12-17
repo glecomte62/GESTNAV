@@ -162,6 +162,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             @mail($preinsc['email'], $subject, $message, $headers);
             
+            // Logger l'envoi
+            try {
+                $stmtLog = $pdo->prepare("INSERT INTO email_logs (sender_id, recipient_email, subject, message_html, status, created_at) VALUES (?, ?, ?, ?, 'sent', NOW())");
+                $stmtLog->execute([
+                    $_SESSION['user_id'] ?? 1,
+                    $preinsc['email'],
+                    $subject,
+                    $message
+                ]);
+            } catch (Exception $e) {
+                error_log("Erreur log email validation: " . $e->getMessage());
+            }
+            
             $_SESSION['success'] = "Pré-inscription validée et compte créé avec succès ! Email envoyé au membre.";
             header('Location: preinscriptions_admin.php');
             exit;
@@ -214,6 +227,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $headers .= "From: Club ULM Evasion <info@clubulmevasion.fr>\r\n";
             
             @mail($preinsc['email'], $subject, $message, $headers);
+            
+            // Logger l'envoi
+            try {
+                $stmtLog = $pdo->prepare("INSERT INTO email_logs (sender_id, recipient_email, subject, message_html, status, created_at) VALUES (?, ?, ?, ?, 'sent', NOW())");
+                $stmtLog->execute([
+                    $_SESSION['user_id'] ?? 1,
+                    $preinsc['email'],
+                    $subject,
+                    $message
+                ]);
+            } catch (Exception $e) {
+                error_log("Erreur log email refus: " . $e->getMessage());
+            }
             
             $_SESSION['success'] = "Pré-inscription refusée. Email envoyé au candidat.";
             header('Location: preinscriptions_admin.php');

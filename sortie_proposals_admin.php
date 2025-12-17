@@ -75,8 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $proposal_id = (int)($_POST['id'] ?? 0);
         
         if ($proposal_id > 0) {
-            // Récupérer la proposition
-            $stmt = $pdo->prepare("SELECT * FROM sortie_proposals WHERE id = ?");
+            // Récupérer la proposition avec les informations de l'auteur
+            $stmt = $pdo->prepare("SELECT sp.*, u.prenom, u.nom FROM sortie_proposals sp JOIN users u ON sp.user_id = u.id WHERE sp.id = ?");
             $stmt->execute([$proposal_id]);
             $proposal = $stmt->fetch();
             
@@ -92,13 +92,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $year = (int)$month_num > (int)$current_month ? $current_year : $current_year + 1;
                     $date_sortie = $year . '-' . $month_num . '-01 09:00:00';
                     
+                    // Ajouter "Proposée par [Nom]" au briefing
+                    $auteur = trim($proposal['prenom'] . ' ' . $proposal['nom']);
+                    $briefing_avec_auteur = "💡 Proposée par " . $auteur;
+                    
                     // Créer la sortie avec destination_id si disponible
-                    $stmt = $pdo->prepare("INSERT INTO sorties (date_sortie, titre, description, statut, created_by, destination_id) VALUES (?, ?, ?, 'en étude', ?, ?)");
+                    $stmt = $pdo->prepare("INSERT INTO sorties (date_sortie, titre, description, details, statut, created_by, destination_id) VALUES (?, ?, ?, ?, 'en étude', ?, ?)");
                     
                     $stmt->execute([
                         $date_sortie,
                         $proposal['titre'],
                         $proposal['description'],
+                        $briefing_avec_auteur,
                         $_SESSION['user_id'] ?? 1,  // admin user
                         $proposal['aerodrome_id'] ?: null  // destination depuis la proposition
                     ]);

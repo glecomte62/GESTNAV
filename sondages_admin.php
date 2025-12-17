@@ -13,6 +13,13 @@ if (!is_admin()) {
 $message = '';
 $error = '';
 
+// Message de succès après redirection
+if (isset($_GET['msg'])) {
+    if ($_GET['msg'] === 'edited') {
+        $message = "✅ Sondage et options modifiés avec succès";
+    }
+}
+
 // Création d'un nouveau sondage
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create') {
     try {
@@ -76,7 +83,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         $stmt = $pdo->prepare("UPDATE polls SET titre = ?, description = ?, allow_multiple_choices = ?, deadline = ? WHERE id = ? AND creator_id = ?");
         $stmt->execute([$titre, $description, $allow_multiple_choices, $deadline, $poll_id, $_SESSION['user_id']]);
-        $message = "✅ Sondage modifié avec succès";
+        
+        // Gérer les options modifiées
+        if (isset($_POST['option_id']) && is_array($_POST['option_id'])) {
+            foreach ($_POST['option_id'] as $index => $option_id) {
+                $option_text = trim($_POST['option_text'][$index] ?? '');
+                if (!empty($option_text) && !empty($option_id)) {
+                    // Mettre à jour l'option existante
+                    $stmt = $pdo->prepare("UPDATE poll_options SET text = ? WHERE id = ? AND poll_id = ?");
+                    $stmt->execute([$option_text, $option_id, $poll_id]);
+                }
+            }
+        }
+        
+        // Gérer les nouvelles options
+        if (isset($_POST['new_options']) && is_array($_POST['new_options'])) {
+            foreach ($_POST['new_options'] as $new_option) {
+                $new_option = trim($new_option);
+                if (!empty($new_option)) {
+                    $stmt = $pdo->prepare("INSERT INTO poll_options (poll_id, text) VALUES (?, ?)");
+                    $stmt->execute([$poll_id, $new_option]);
+                }
+            }
+        }
+        
+        // Gérer les options à supprimer
+        if (isset($_POST['delete_options']) && is_array($_POST['delete_options'])) {
+            foreach ($_POST['delete_options'] as $option_id_to_delete) {
+                // Vérifier qu'il n'y a pas de votes sur cette option avant de la supprimer
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM poll_votes WHERE option_id = ?");
+                $stmt->execute([$option_id_to_delete]);
+                $votes_count = $stmt->fetchColumn();
+                
+                if ($votes_count == 0) {
+                    $stmt = $pdo->prepare("DELETE FROM poll_options WHERE id = ? AND poll_id = ?");
+                    $stmt->execute([$option_id_to_delete, $poll_id]);
+                }
+            }
+        }
+        
+        $message = "✅ Sondage et options modifiés avec succès";
+        // Rediriger pour éviter la resoumission
+        header("Location: sondages_admin.php?msg=edited");
+        exit;
     } catch (Exception $e) {
         $error = "❌ Erreur : " . $e->getMessage();
     }
@@ -96,11 +145,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Récupérer un sondage spécifique pour édition
 $poll_to_edit = null;
+$poll_options = [];
 if (isset($_GET['edit'])) {
     $edit_id = intval($_GET['edit']);
     $stmt = $pdo->prepare("SELECT * FROM polls WHERE id = ? AND creator_id = ?");
     $stmt->execute([$edit_id, $_SESSION['user_id']]);
     $poll_to_edit = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Charger les options du sondage
+    if ($poll_to_edit) {
+        $stmt = $pdo->prepare("SELECT * FROM poll_options WHERE poll_id = ? ORDER BY id ASC");
+        $stmt->execute([$poll_to_edit['id']]);
+        $poll_options = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
 
 // Récupérer les sondages
@@ -544,6 +601,22 @@ require 'header.php';
                 <div class="options-note">Laissez vide pour fermer manuellement</div>
             </div>
 
+            <div class="form-group">
+                <label>📝 Options du sondage</label>
+                <div id="edit-options-container">
+                    <?php foreach ($poll_options as $index => $option): ?>
+                    <div class="option-item" data-option-id="<?= $option['id'] ?>">
+                        <input type="hidden" name="option_id[]" value="<?= $option['id'] ?>">
+                        <input type="text" name="option_text[]" value="<?= htmlspecialchars($option['text']) ?>" placeholder="Option <?= $index + 1 ?>" style="flex: 1;">
+                        <button type="button" class="btn-remove-option" onclick="removeExistingOption(this, <?= $option['id'] ?>)" title="Supprimer cette option">🗑️</button>
+                    </div>
+                    <?php endforeach; ?>
+                    <div id="new-options-edit-container"></div>
+                </div>
+                <button type="button" class="btn-add-option" onclick="addEditOption()">➕ Ajouter une option</button>
+                <div class="options-note">⚠️ Les options avec des votes ne peuvent pas être supprimées</div>
+            </div>
+
             <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem;">
                 <button type="submit" class="btn-primary" style="flex: 1;">💾 Enregistrer</button>
                 <button type="button" class="btn-secondary" onclick="closeEditModal()" style="flex: 1;">❌ Annuler</button>
@@ -551,6 +624,96 @@ require 'header.php';
         </form>
     </div>
 </div>
+
+<style>
+.option-item {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.option-item input[type="text"] {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+}
+
+.btn-remove-option {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-remove-option:hover {
+    background: #dc2626;
+}
+
+.btn-add-option {
+    background: #10b981;
+    color: white;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 0.5rem;
+}
+
+.btn-add-option:hover {
+    background: #059669;
+}
+</style>
+
+<script>
+let editOptionCounter = 0;
+let deletedOptions = [];
+
+function addEditOption() {
+    editOptionCounter++;
+    const container = document.getElementById('new-options-edit-container');
+    const div = document.createElement('div');
+    div.className = 'option-item';
+    div.innerHTML = `
+        <input type="text" name="new_options[]" placeholder="Nouvelle option" style="flex: 1;">
+        <button type="button" class="btn-remove-option" onclick="this.parentElement.remove()" title="Supprimer">🗑️</button>
+    `;
+    container.appendChild(div);
+}
+
+function removeExistingOption(button, optionId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette option ? (Les options avec des votes ne seront pas supprimées)')) {
+        const optionItem = button.closest('.option-item');
+        
+        // Ajouter un champ caché pour marquer l'option comme supprimée
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'delete_options[]';
+        input.value = optionId;
+        optionItem.appendChild(input);
+        
+        // Masquer visuellement
+        optionItem.style.display = 'none';
+    }
+}
+
+function closeEditModal() {
+    window.location.href = 'sondages_admin.php';
+}
+
+// Auto-ouvrir le modal si on est en mode édition
+<?php if ($poll_to_edit): ?>
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('editModal').style.display = 'flex';
+});
+<?php endif; ?>
+</script>
 <?php endif; ?>
 
 <div class="sondages-container">

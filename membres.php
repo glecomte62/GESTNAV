@@ -396,13 +396,13 @@ require 'header.php';
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
+    z-index: 9999;
     align-items: center;
     justify-content: center;
 }
 
 .modal-overlay.active {
-    display: flex;
+    display: flex !important;
 }
 
 .modal {
@@ -411,7 +411,11 @@ require 'header.php';
     padding: 2rem;
     max-width: 500px;
     width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    z-index: 10000;
 }
 
 .modal-header {
@@ -488,7 +492,7 @@ require 'header.php';
             <div class="page-header-subtitle">Gérez les membres du club</div>
         </div>
         <div class="header-action">
-            <button class="btn-create" onclick="openCreateModal()">➕ Nouveau membre</button>
+            <button class="btn-create" onclick="document.getElementById('createModal').style.display='flex'; return false;">➕ Nouveau membre</button>
         </div>
     </div>
 
@@ -595,71 +599,56 @@ require 'header.php';
         </table>
     <?php endif; ?>
 </div>
+<!-- Fin de membres-page -->
 
-<!-- Modal Création -->
-<div class="modal-overlay" id="createModal">
-    <div class="modal">
-        <div class="modal-header">➕ Créer un nouveau membre</div>
-        <form method="post">
+<!-- Modal Création (en dehors du conteneur) -->
+<div id="createModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 99999; align-items: center; justify-content: center;" onclick="if(event.target===this) this.style.display='none';">
+    <div onclick="event.stopPropagation();" style="background: white; padding: 2rem; border-radius: 1rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+        <h2 style="margin: 0 0 1.5rem 0; color: #004b8d;">➕ Créer un nouveau membre</h2>
+        <form method="post" action="membres.php">
             <input type="hidden" name="action" value="create_member">
             
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">Prénom *</label>
-                    <input type="text" name="prenom" class="form-input" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Nom *</label>
-                    <input type="text" name="nom" class="form-input" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" name="email" class="form-input">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Téléphone</label>
-                    <input type="tel" name="telephone" class="form-input">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Qualification</label>
-                    <input type="text" name="qualification" class="form-input" placeholder="Pilote, Élève-Pilote...">
-                </div>
-
-                <?php if ($hasTypeMembre): ?>
-                <div class="form-group">
-                    <label class="form-label">Type de membre</label>
-                    <select name="type_membre" class="form-input">
-                        <option value="club" selected>🏢 CLUB</option>
-                        <option value="invite">👥 INVITE</option>
-                    </select>
-                </div>
-                <?php endif; ?>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Prénom *</label>
+                <input type="text" name="prenom" required style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;">
             </div>
 
-            <div class="modal-actions">
-                <button type="submit" class="btn btn-primary">Créer le membre</button>
-                <button type="button" class="btn btn-secondary" onclick="closeCreateModal()">Annuler</button>
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Nom *</label>
+                <input type="text" name="nom" required style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Email</label>
+                <input type="email" name="email" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Téléphone</label>
+                <input type="tel" name="telephone" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Qualification</label>
+                <input type="text" name="qualification" placeholder="Pilote, Élève-Pilote..." style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;">
+            </div>
+
+            <?php if ($hasTypeMembre): ?>
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Type de membre</label>
+                <select name="type_membre" style="width: 100%; padding: 0.6rem; border: 1px solid #ddd; border-radius: 0.5rem; font-size: 1rem; box-sizing: border-box;">
+                    <option value="club" selected>🏢 CLUB</option>
+                    <option value="invite">👥 INVITE</option>
+                </select>
+            </div>
+            <?php endif; ?>
+
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" onclick="document.getElementById('createModal').style.display='none';" style="padding: 0.7rem 1.5rem; border: 1px solid #ddd; background: white; border-radius: 0.5rem; cursor: pointer; font-size: 1rem;">Annuler</button>
+                <button type="submit" style="padding: 0.7rem 1.5rem; border: none; background: #004b8d; color: white; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 1rem;">Créer le membre</button>
             </div>
         </form>
     </div>
 </div>
-
-<script>
-function openCreateModal() {
-    document.getElementById('createModal').classList.add('active');
-}
-
-function closeCreateModal() {
-    document.getElementById('createModal').classList.remove('active');
-}
-
-document.getElementById('createModal').addEventListener('click', function(e) {
-    if (e.target === this) closeCreateModal();
-});
-</script>
 
 <?php require 'footer.php'; ?>

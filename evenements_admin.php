@@ -32,6 +32,7 @@ $evenements = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $date_fin = $_POST['date_fin'] ?? '';
         $lieu = $_POST['lieu'] ?? '';
         $adresse = $_POST['adresse'] ?? '';
+        $url = $_POST['url'] ?? '';
         
         // Vérifier si c'est un événement multi-jours
         $is_multi_day = 0;
@@ -66,11 +67,11 @@ $evenements = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     }
                 }
                 if ($hasCover && $cover_filename) {
-                    $ins = $pdo->prepare("INSERT INTO evenements (titre, description, type, date_evenement, date_fin, is_multi_day, lieu, adresse, cover_filename, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                    $ins->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $lieu, $adresse, $cover_filename, $_SESSION['user_id']]);
+                    $ins = $pdo->prepare("INSERT INTO evenements (titre, description, type, date_evenement, date_fin, is_multi_day, lieu, adresse, url, cover_filename, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $ins->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $lieu, $adresse, $url, $cover_filename, $_SESSION['user_id']]);
                 } else {
-                    $ins = $pdo->prepare("INSERT INTO evenements (titre, description, type, date_evenement, date_fin, is_multi_day, lieu, adresse, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                    $ins->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $lieu, $adresse, $_SESSION['user_id']]);
+                    $ins = $pdo->prepare("INSERT INTO evenements (titre, description, type, date_evenement, date_fin, is_multi_day, lieu, adresse, url, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $ins->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $lieu, $adresse, $url, $_SESSION['user_id']]);
                 }
                 $message = "Événement créé";
             } catch (Exception $e) {
@@ -172,6 +173,11 @@ $evenements = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="mb-3">
                         <label class="form-label">Adresse complète</label>
                         <textarea name="adresse" class="form-control" rows="2" placeholder="Adresse, numéro de salle, etc."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Lien URL (optionnel)</label>
+                        <input type="url" name="url" class="form-control" placeholder="https://exemple.com">
+                        <div class="form-text">Lien vers un site web, un formulaire externe, etc.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Image de couverture (jpg, png, webp)</label>

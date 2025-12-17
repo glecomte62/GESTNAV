@@ -1,0 +1,7 @@
+open ftp.kica7829.odns.fr
+user gestnav@kica7829.odns.fr Corvus2024@LFQJ
+cd gestnav.clubulmevasion.fr
+delete login.php
+cd ..
+rmdir gestnav.clubulmevasion.fr
+bye

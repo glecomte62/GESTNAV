@@ -26,30 +26,68 @@ try {
         exit;
     }
 
-    // Calculer distance depuis LFQJ basée sur l'aérodrome (si on a une carte de coordonnées)
+    // Calculer distance et temps de vol depuis la base du club
     $distance_km = null;
     $flight_time_min = null;
 
-    // Dictionnaire simplifié des distances LFQJ pour les aérodromes communs
-    $aerodromes_distances = [
-        'LFAC' => 150,  // Auch-Lamothe
-        'LFBO' => 187,  // Toulouse-Blagnac
-        'LFPG' => 567,  // Paris-Orly
-        'LFPB' => 580,  // Paris-Le Bourget
-        'LFPD' => 590,  // Paris-Orly CDG
-        'LFLY' => 465,  // Lyon-Bron
-        'LFML' => 387,  // Marseille-Provence
-        'LFNT' => 240,  // Nantes-Atlantique
-        'LFRN' => 350,  // Rennes
-        'LFPO' => 290,  // Poitiers
-        'LFRS' => 110,  // Rochefort-St Agnant
-        'LFBX' => 0,    // Bordeaux-Mérignac (LFQJ = Bordeaux)
-        'LFQJ' => 0,    // Bordeaux-Mérignac
-    ];
+    // Récupérer les coordonnées de l'aérodrome de destination
+    if ($proposal['aerodrome_id']) {
+        $stmt_dest = $pdo->prepare("SELECT * FROM aerodromes_fr WHERE id = ?");
+        $stmt_dest->execute([$proposal['aerodrome_id']]);
+        $dest = $stmt_dest->fetch(PDO::FETCH_ASSOC);
 
-    if ($proposal['oaci'] && isset($aerodromes_distances[$proposal['oaci']])) {
-        $distance_km = $aerodromes_distances[$proposal['oaci']];
-        $flight_time_min = round($distance_km / 1.5); // 90 km/h = distance/1.5
+        if ($dest) {
+            // Trouver les colonnes lat/lon (plusieurs formats possibles)
+            $dest_lat = null; $dest_lon = null;
+            foreach (['lat','latitude','lat_deg'] as $latKey) {
+                foreach (['lon','longitude','lng','lon_deg'] as $lonKey) {
+                    if (isset($dest[$latKey], $dest[$lonKey])) {
+                        $dest_lat = (float)$dest[$latKey];
+                        $dest_lon = (float)$dest[$lonKey];
+                        break 2;
+                    }
+                }
+            }
+
+            if ($dest_lat && $dest_lon) {
+                // Récupérer les coordonnées de la base du club (LFQJ par défaut)
+                $base_oaci = defined('CLUB_HOME_BASE') ? CLUB_HOME_BASE : 'LFQJ';
+                $stmt_base = $pdo->prepare("SELECT * FROM aerodromes_fr WHERE oaci = ? LIMIT 1");
+                $stmt_base->execute([$base_oaci]);
+                $base = $stmt_base->fetch(PDO::FETCH_ASSOC);
+
+                if ($base) {
+                    $base_lat = null; $base_lon = null;
+                    foreach (['lat','latitude','lat_deg'] as $latKey) {
+                        foreach (['lon','longitude','lng','lon_deg'] as $lonKey) {
+                            if (isset($base[$latKey], $base[$lonKey])) {
+                                $base_lat = (float)$base[$latKey];
+                                $base_lon = (float)$base[$lonKey];
+                                break 2;
+                            }
+                        }
+                    }
+
+                    if ($base_lat && $base_lon) {
+                        // Calcul de la distance avec la formule de Haversine
+                        $lat1 = deg2rad($base_lat);
+                        $lon1 = deg2rad($base_lon);
+                        $lat2 = deg2rad($dest_lat);
+                        $lon2 = deg2rad($dest_lon);
+
+                        $dlat = $lat2 - $lat1;
+                        $dlon = $lon2 - $lon1;
+
+                        $a = sin($dlat/2) * sin($dlat/2) + cos($lat1) * cos($lat2) * sin($dlon/2) * sin($dlon/2);
+                        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+                        $distance_km = round(6371 * $c); // Rayon de la Terre en km
+
+                        // Temps de vol estimé à 90 km/h (vitesse moyenne ULM)
+                        $flight_time_min = round($distance_km / 90 * 60);
+                    }
+                }
+            }
+        }
     }
 
     // Déterminer icône et couleur du statut
@@ -431,7 +469,7 @@ require 'header.php';
                             }
                             ?>
                         </div>
-                        <div class="label"><i class="bi bi-compass"></i> km LFQJ</div>
+                        <div class="label"><i class="bi bi-compass"></i> km <?= defined('CLUB_HOME_BASE') ? CLUB_HOME_BASE : 'base' ?></div>
                     </div>
 
                     <div class="badge-item time">

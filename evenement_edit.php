@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     $date_limite = $_POST['date_limite'] ?? '';
     $lieu = $_POST['lieu'] ?? '';
     $adresse = $_POST['adresse'] ?? '';
+    $url = $_POST['url'] ?? '';
     $statut = $_POST['statut'] ?? 'prévu';
     
     // Vérifier si c'est un événement multi-jours
@@ -70,11 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
             $date_limite_param = ($date_limite === '') ? null : $date_limite;
 
             if ($hasCoverColumn && $new_cover_filename) {
-                $upd = $pdo->prepare("UPDATE evenements SET titre = ?, description = ?, type = ?, date_evenement = ?, date_fin = ?, is_multi_day = ?, date_limite_inscription = ?, lieu = ?, adresse = ?, statut = ?, cover_filename = ? WHERE id = ?");
-                $upd->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $date_limite_param, $lieu, $adresse, $statut, $new_cover_filename, $evenement_id]);
+                $upd = $pdo->prepare("UPDATE evenements SET titre = ?, description = ?, type = ?, date_evenement = ?, date_fin = ?, is_multi_day = ?, date_limite_inscription = ?, lieu = ?, adresse = ?, url = ?, statut = ?, cover_filename = ? WHERE id = ?");
+                $upd->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $date_limite_param, $lieu, $adresse, $url, $statut, $new_cover_filename, $evenement_id]);
             } else {
-                $upd = $pdo->prepare("UPDATE evenements SET titre = ?, description = ?, type = ?, date_evenement = ?, date_fin = ?, is_multi_day = ?, date_limite_inscription = ?, lieu = ?, adresse = ?, statut = ? WHERE id = ?");
-                $upd->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $date_limite_param, $lieu, $adresse, $statut, $evenement_id]);
+                $upd = $pdo->prepare("UPDATE evenements SET titre = ?, description = ?, type = ?, date_evenement = ?, date_fin = ?, is_multi_day = ?, date_limite_inscription = ?, lieu = ?, adresse = ?, url = ?, statut = ? WHERE id = ?");
+                $upd->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $date_limite_param, $lieu, $adresse, $url, $statut, $evenement_id]);
             }
             $success = "Événement mis à jour avec succès !";
 
@@ -230,6 +231,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_cover'])) {
             <div class="mb-3">
                 <label class="form-label">Adresse complète</label>
                 <textarea name="adresse" class="form-control" rows="2"><?= htmlspecialchars($evt['adresse']) ?></textarea>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Lien URL (optionnel)</label>
+                <input type="url" name="url" class="form-control" value="<?= htmlspecialchars($evt['url'] ?? '') ?>" placeholder="https://exemple.com">
+                <div class="form-text">Lien vers un site web, un formulaire externe, etc.</div>
             </div>
             
             <div class="row">
