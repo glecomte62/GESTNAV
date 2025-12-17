@@ -141,17 +141,27 @@ try {
         $sectionsHtml .= '</ul>';
     }
     
-    // Nettoyer le HTML
-    $sectionsHtml = str_replace('<code>', '<code style="background: #f3f4f6; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; color: #d97706;">', $sectionsHtml);
+    // Créer un message ultra-simplifié SANS détails techniques
+    $totalAdded = count($allAddedItems);
+    $totalChanged = count($allChangedItems);
+    $totalFixed = count($allFixedItems);
     
-    // Message d'introduction personnalisé selon le nombre de versions
-    $introMessage = '';
-    if ($startIndex > 0) {
-        $nbVersions = $startIndex + 1;
-        $introMessage = "Nous avons le plaisir de vous présenter <strong>$nbVersions nouvelle" . ($nbVersions > 1 ? 's' : '') . " version" . ($nbVersions > 1 ? 's' : '') . "</strong> de GESTNAV ! Voici un récapitulatif de toutes les évolutions apportées depuis la version " . trim($allVersions[$startIndex][2]) . " :";
-    } else {
-        $introMessage = "Nous sommes ravis de vous annoncer que votre application <strong>GESTNAV</strong> vient d'être mise à jour avec de nouvelles fonctionnalités et améliorations :";
-    }
+    // Message simple sans listes
+    $sectionsHtml = '<div style="background: linear-gradient(135deg, #e0f2fe, #dbeafe); padding: 1.5rem; border-radius: 10px; text-align: center; border: 2px solid #3b82f6;">';
+    $sectionsHtml .= '<p style="margin: 0; font-size: 1.2rem; color: #1e3a8a; font-weight: 600;">Votre application évolue pour mieux vous servir !</p>';
+    $sectionsHtml .= '<p style="margin: 1rem 0 0; font-size: 1rem; color: #1e40af; line-height: 1.6;">';
+    $sectionsHtml .= 'De nouvelles fonctionnalités ont été ajoutées, l\'interface a été améliorée et plusieurs bugs ont été corrigés.';
+    $sectionsHtml .= '</p>';
+    $sectionsHtml .= '</div>';
+    
+    $sectionsHtml .= '<div style="margin-top: 1.5rem; padding: 1.25rem; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">';
+    $sectionsHtml .= '<p style="margin: 0; color: #92400e; font-size: 1rem; line-height: 1.6;">';
+    $sectionsHtml .= '💡 <strong>Connectez-vous pour découvrir les nouveautés par vous-même !</strong>';
+    $sectionsHtml .= '</p>';
+    $sectionsHtml .= '</div>';
+    
+    // Message d'introduction simplifié
+    $introMessage = "Votre application GESTNAV a été mise à jour pour améliorer votre expérience.";
     
     // Construire l'aperçu HTML
     $previewHtml = '<div style="font-family: Arial, sans-serif; line-height: 1.6;">';
@@ -172,11 +182,13 @@ try {
     
     $previewHtml .= '<div style="padding: 2rem; background: white;">';
     $previewHtml .= '<p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Bonjour <strong style="color: #00a0c6;">[Prénom]</strong>,</p>';
-    $previewHtml .= '<p style="margin-bottom: 1.5rem;">' . $introMessage . '</p>';
-    $previewHtml .= '<div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #00a0c6;">';
+    $previewHtml .= '<p style="margin-bottom: 1.5rem; font-size: 1rem; color: #374151;">' . $introMessage . '</p>';
     $previewHtml .= $sectionsHtml;
-    $previewHtml .= '</div>';
-    $previewHtml .= '<p style="margin-top: 2rem;">N\'hésitez pas à vous connecter pour découvrir ces nouveautés !</p>';
+    $previewHtml .= '<div style="text-align: center; margin-top: 1.5rem; padding: 1rem; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">';
+    $previewHtml .= '<p style="margin: 0; color: #6b7280; font-size: 0.9rem;">';
+    $previewHtml .= '📋 Pour les curieux, tous les détails techniques sont disponibles sur le ';
+    $previewHtml .= '<a href="https://gestnav.clubulmevasion.fr/changelog.php" style="color: #2563eb; font-weight: 500; text-decoration: underline;">changelog</a>';
+    $previewHtml .= '</p></div>';
     $previewHtml .= '<p style="text-align: center; margin-top: 2rem;">';
     $previewHtml .= '<a href="https://gestnav.clubulmevasion.fr" style="display:inline-block;padding:12px 24px;border-radius:6px;background-color:#004b8d;color:#ffffff;text-decoration:none;font-weight:600;">🔗 Accéder à GESTNAV</a>';
     $previewHtml .= '</p>';
