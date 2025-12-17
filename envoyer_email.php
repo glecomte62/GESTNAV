@@ -198,7 +198,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         preg_match_all('/<li>(.*?)<\/li>/s', $addedMatch[1], $items);
                         foreach ($items[1] as $item) {
                             $cleanItem = strip_tags($item, '<strong><code>');
-                            if (!empty(trim($cleanItem)) && !isAdminFeature($cleanItem)) {
+                            if (!empty(trim($cleanItem))) {
                                 $allAddedItems[] = $cleanItem;
                                 $itemsByVersion[$versionNumber]['added'][] = $cleanItem;
                             }
@@ -210,7 +210,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         preg_match_all('/<li>(.*?)<\/li>/s', $changedMatch[1], $items);
                         foreach ($items[1] as $item) {
                             $cleanItem = strip_tags($item, '<strong><code>');
-                            if (!empty(trim($cleanItem)) && !isAdminFeature($cleanItem)) {
+                            if (!empty(trim($cleanItem))) {
                                 $allChangedItems[] = $cleanItem;
                                 $itemsByVersion[$versionNumber]['changed'][] = $cleanItem;
                             }
@@ -222,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         preg_match_all('/<li>(.*?)<\/li>/s', $fixedMatch[1], $items);
                         foreach ($items[1] as $item) {
                             $cleanItem = strip_tags($item, '<strong><code>');
-                            if (!empty(trim($cleanItem)) && !isAdminFeature($cleanItem)) {
+                            if (!empty(trim($cleanItem))) {
                                 $allFixedItems[] = $cleanItem;
                                 $itemsByVersion[$versionNumber]['fixed'][] = $cleanItem;
                             }
