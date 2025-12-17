@@ -621,11 +621,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
         // Récupérer toutes les affectations qu'on vient de faire
         $stmt = $pdo->prepare("
             SELECT sa.user_id, u.email, u.prenom, u.nom, 
-                   m.nom AS machine_nom, m.immatriculation
+                   m.nom AS machine_nom, m.immatriculation, sa.sortie_machine_id,
+                   u2.prenom AS coequipier_prenom, u2.nom AS coequipier_nom
             FROM sortie_assignations sa
             JOIN users u ON u.id = sa.user_id
             JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id
             JOIN machines m ON m.id = sm.machine_id
+            LEFT JOIN sortie_assignations sa2 ON sa2.sortie_machine_id = sa.sortie_machine_id AND sa2.user_id != sa.user_id
+            LEFT JOIN users u2 ON u2.id = sa2.user_id
             WHERE sm.sortie_id = ?
             ORDER BY u.nom, u.prenom
         ");
@@ -652,6 +655,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
             
             $full_name = trim($aff['prenom'] . ' ' . $aff['nom']);
             $machine_label = $aff['machine_nom'] . ' (' . $aff['immatriculation'] . ')';
+            
+            // Coéquipier
+            $coequipier_info = '';
+            if (!empty($aff['coequipier_prenom']) || !empty($aff['coequipier_nom'])) {
+                $coequipier_nom = trim(($aff['coequipier_prenom'] ?? '') . ' ' . ($aff['coequipier_nom'] ?? ''));
+                $coequipier_info = "<br><strong>👥 Coéquipier :</strong> " . htmlspecialchars($coequipier_nom);
+                $coequipier_text = "\nCoéquipier : $coequipier_nom";
+            } else {
+                $coequipier_text = '';
+            }
             
             // Générer un token d'action si absent
             $stmt_token = $pdo->prepare("SELECT action_token FROM sortie_inscriptions WHERE sortie_id = ? AND user_id = ? LIMIT 1");
@@ -707,7 +720,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
                         
                         <div class='info'>
                             <strong>📅 Date :</strong> " . htmlspecialchars($sortie['date_sortie']) . "<br>
-                            <strong>✈️ Machine :</strong> " . htmlspecialchars($machine_label) . "
+                            <strong>✈️ Machine :</strong> " . htmlspecialchars($machine_label) . $coequipier_info . "
                         </div>
                         
                         <p>Merci d'être présent à l'heure prévue pour le briefing.</p>
@@ -733,7 +746,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
             $text_body = "Bonjour $full_name,\n\n"
                        . "Votre participation à la sortie ULM " . $sortie['titre'] . " est confirmée !\n"
                        . "Date : " . $sortie['date_sortie'] . "\n"
-                       . "Machine : $machine_label\n\n"
+                       . "Machine : $machine_label" . $coequipier_text . "\n\n"
                        . "Merci d'être présent à l'heure prévue pour le briefing.\n\n"
                        . "Gérer votre participation :\n"
                        . "- Annuler : " . strip_tags($action_annuler) . "\n"
