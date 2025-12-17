@@ -141,38 +141,48 @@ try {
         $sectionsHtml .= '</ul>';
     }
     
-    // Créer un résumé avec grandes lignes (3-5 points max)
+    // Créer un résumé avec les gros titres et leurs descriptions
     $totalAdded = count($allAddedItems);
     $totalChanged = count($allChangedItems);
     $totalFixed = count($allFixedItems);
     
-    // Extraire les grandes lignes (premières phrases uniquement)
+    // Extraire les grandes lignes avec titre et première phrase de description
     $highlights = [];
     
-    // Limiter à 3 nouveautés maximum
-    foreach (array_slice($allAddedItems, 0, 3) as $item) {
-        $firstSentence = explode(':', $item)[0];
-        $firstSentence = strip_tags($firstSentence);
-        if (!empty(trim($firstSentence)) && strlen($firstSentence) < 100) {
-            $highlights[] = $firstSentence;
+    // Limiter à 5-6 nouveautés maximum
+    foreach (array_slice($allAddedItems, 0, 6) as $item) {
+        $parts = explode(':', $item, 2);
+        $title = strip_tags($parts[0]);
+        $desc = '';
+        if (isset($parts[1])) {
+            // Prendre la première phrase de description
+            $descText = strip_tags($parts[1]);
+            $sentences = preg_split('/(?<=[.!?])\s+/', trim($descText), 2);
+            $desc = trim($sentences[0]);
+        }
+        if (!empty(trim($title))) {
+            $highlights[] = ['title' => $title, 'desc' => $desc];
         }
     }
     
-    // Résumé visuel
+    // Résumé visuel avec nouveautés
     $sectionsHtml = '<div style="background: linear-gradient(135deg, #e0f2fe, #dbeafe); padding: 1.5rem; border-radius: 10px; border: 2px solid #3b82f6;">';
-    $sectionsHtml .= '<p style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #1e3a8a; font-weight: 600; text-align: center;">✨ Quoi de neuf ?</p>';
+    $sectionsHtml .= '<p style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #1e3a8a; font-weight: 600; text-align: center;">✨ Nouveautés</p>';
     
     if (!empty($highlights)) {
-        $sectionsHtml .= '<ul style="margin: 0; padding-left: 1.5rem; color: #1e40af; line-height: 1.8;">';
-        foreach ($highlights as $highlight) {
-            $sectionsHtml .= '<li>' . htmlspecialchars($highlight) . '</li>';
+        foreach ($highlights as $item) {
+            $sectionsHtml .= '<div style="margin-bottom: 1rem;">';
+            $sectionsHtml .= '<strong style="color: #1e3a8a;">' . htmlspecialchars($item['title']) . '</strong>';
+            if (!empty($item['desc'])) {
+                $sectionsHtml .= '<br><span style="color: #1e40af; font-size: 0.95rem;">' . htmlspecialchars($item['desc']) . '</span>';
+            }
+            $sectionsHtml .= '</div>';
         }
-        $sectionsHtml .= '</ul>';
     }
     
     if ($totalChanged > 0 || $totalFixed > 0) {
-        $sectionsHtml .= '<p style="margin: 1rem 0 0 0; font-size: 0.95rem; color: #1e40af; text-align: center;">';
-        $sectionsHtml .= '+ des améliorations et corrections diverses';
+        $sectionsHtml .= '<p style="margin: 1rem 0 0 0; font-size: 0.95rem; color: #1e40af; text-align: center; border-top: 1px solid #bfdbfe; padding-top: 1rem;">';
+        $sectionsHtml .= '🔄 + ' . ($totalChanged + $totalFixed) . ' amélioration' . (($totalChanged + $totalFixed) > 1 ? 's' : '') . ' et correction' . (($totalChanged + $totalFixed) > 1 ? 's' : '');
         $sectionsHtml .= '</p>';
     }
     $sectionsHtml .= '</div>';
