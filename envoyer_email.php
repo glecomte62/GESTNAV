@@ -951,7 +951,7 @@ require 'header.php';
                     📋 Choisir à partir de quelle version générer l'email :
                 </label>
                 <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
-                    <select id="versionSelector" style="flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; font-size: 0.9rem; background: white;">
+                    <select id="versionSelector" onchange="document.getElementById('selectedVersionInput').value = this.value; updatePreview();" style="flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.75rem; font-size: 0.9rem; background: white;">
                         <?php foreach ($availableVersions as $idx => $versionData): ?>
                             <option value="<?= htmlspecialchars($versionData['version']) ?>" <?= $idx === 0 ? 'selected' : '' ?>>
                                 <?php if ($idx === 0): ?>
