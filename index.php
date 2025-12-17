@@ -307,70 +307,104 @@ try {
     <?php if (count($evenements) > 0): ?>
     <!-- Panneau "Événements à venir" -->
     <div class="gn-hero-aside" style="margin-top: 1.5rem;">
-        <div class="preparation-panel" style="padding: 1rem;">
-            <div class="preparation-header" style="padding-bottom: 0.75rem;">
-                <div class="preparation-icon" style="width: 2rem; height: 2rem; font-size: 1rem;">📅</div>
-                <div>
-                    <h3 class="preparation-title" style="font-size: 1rem; margin-bottom: 0.25rem;">Prochains événements</h3>
-                    <p class="preparation-subtitle" style="font-size: 0.75rem;">Découvrez les événements à venir du club...</p>
+        <div class="preparation-panel" style="padding: 1.25rem; background: rgba(255, 255, 255, 0.95);">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 2.5rem; height: 2.5rem; background: linear-gradient(135deg, #9c27b0, #ba68c8); 
+                                border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; 
+                                font-size: 1.25rem;">📅</div>
+                    <div>
+                        <h3 style="font-size: 1.1rem; font-weight: 700; color: #1a1a1a; margin: 0; line-height: 1.2;">
+                            Prochains événements
+                        </h3>
+                        <p style="font-size: 0.8rem; color: #666; margin: 0; line-height: 1.3;">
+                            Découvrez les événements à venir du club...
+                        </p>
+                    </div>
                 </div>
+                <a href="evenements_list.php" 
+                   style="color: #004b8d; text-decoration: none; font-size: 0.85rem; font-weight: 600; 
+                          white-space: nowrap; transition: color 0.2s;"
+                   onmouseover="this.style.color='#00a0c6'"
+                   onmouseout="this.style.color='#004b8d'">
+                    Tout voir <i class="bi bi-arrow-right"></i>
+                </a>
             </div>
             
-            <div style="overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: thin;">
-                <div style="display: flex; gap: 0.75rem; padding: 0.5rem 0;">
+            <div style="overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; 
+                        scrollbar-width: thin; margin: 0 -0.5rem; padding: 0 0.5rem;">
+                <div style="display: flex; gap: 1rem; padding: 0.25rem 0 0.5rem 0;">
                     <?php foreach ($evenements as $ev): ?>
                     <a href="evenement_inscription_detail.php?id=<?= $ev['id'] ?>" 
                        style="text-decoration: none; color: inherit; flex-shrink: 0;">
-                        <div style="background: white; border-radius: 0.75rem; padding: 0.75rem 1rem; 
-                                    box-shadow: 0 2px 4px rgba(0,0,0,0.08); border: 1px solid #e5e7eb;
-                                    width: 280px; transition: all 0.2s; cursor: pointer;
-                                    display: flex; align-items: center; gap: 0.75rem;"
-                             onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(26,135,203,0.15)'"
-                             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.08)'">
-                            <div style="background: linear-gradient(135deg, #004b8d, #00a0c6); border-radius: 0.5rem; 
-                                        padding: 0.5rem; text-align: center; min-width: 50px;">
-                                <div style="color: white; font-weight: 700; font-size: 1.25rem; line-height: 1;">
+                        <div style="background: white; border-radius: 1rem; padding: 1rem; 
+                                    box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #f0f0f0;
+                                    width: 300px; transition: all 0.3s; cursor: pointer; height: 110px;
+                                    display: flex; align-items: stretch; gap: 1rem;"
+                             onmouseover="this.style.transform='translateY(-4px) scale(1.02)'; this.style.boxShadow='0 8px 20px rgba(156,39,176,0.15)'; this.style.borderColor='#9c27b0'"
+                             onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'; this.style.borderColor='#f0f0f0'">
+                            
+                            <!-- Date Block -->
+                            <div style="background: linear-gradient(135deg, #004b8d, #00a0c6); border-radius: 0.75rem; 
+                                        padding: 0.75rem 0.5rem; text-align: center; min-width: 60px; max-width: 60px;
+                                        display: flex; flex-direction: column; justify-content: center; align-items: center;
+                                        box-shadow: 0 2px 8px rgba(0,75,141,0.3);">
+                                <div style="color: white; font-weight: 800; font-size: 1.75rem; line-height: 1; margin-bottom: 0.25rem;">
                                     <?= date('d', strtotime($ev['date_evenement'])) ?>
                                 </div>
-                                <div style="color: rgba(255,255,255,0.9); font-size: 0.65rem; text-transform: uppercase; font-weight: 600;">
+                                <div style="color: rgba(255,255,255,0.95); font-size: 0.7rem; text-transform: uppercase; 
+                                            font-weight: 700; letter-spacing: 0.5px;">
                                     <?= strtoupper(substr(strftime('%B', strtotime($ev['date_evenement'])), 0, 3)) ?>
                                 </div>
                             </div>
-                            <div style="flex: 1; min-width: 0;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                                    <span class="badge" style="background-color: #9c27b0; font-size: 0.65rem; padding: 0.2rem 0.5rem;">
+                            
+                            <!-- Content Block -->
+                            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <span class="badge" style="background: linear-gradient(135deg, #9c27b0, #ba68c8); 
+                                                                font-size: 0.65rem; padding: 0.25rem 0.6rem; font-weight: 600;
+                                                                box-shadow: 0 1px 3px rgba(156,39,176,0.3);">
                                         <?= htmlspecialchars(ucfirst($ev['type'])) ?>
                                     </span>
+                                    <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
+                                        <span style="font-size: 0.65rem; color: #9c27b0; font-weight: 700; 
+                                                     background: rgba(156,39,176,0.1); padding: 0.25rem 0.5rem; 
+                                                     border-radius: 0.25rem;">
+                                            <i class="bi bi-calendar-range"></i> Multi-jours
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
-                                <div style="font-weight: 600; font-size: 0.875rem; color: #1a1a1a; margin-bottom: 0.25rem;
-                                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                
+                                <div style="font-weight: 700; font-size: 1rem; color: #1a1a1a; margin-bottom: 0.5rem; 
+                                            line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; 
+                                            -webkit-box-orient: vertical; overflow: hidden;">
                                     <?= htmlspecialchars($ev['titre']) ?>
                                 </div>
-                                <div style="font-size: 0.75rem; color: #666; margin-bottom: 0.25rem;">
-                                    <i class="bi bi-geo-alt" style="font-size: 0.7rem;"></i>
-                                    <?= htmlspecialchars($ev['lieu']) ?>
+                                
+                                <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.75rem; color: #666;">
+                                    <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                        <i class="bi bi-geo-alt-fill" style="color: #004b8d;"></i>
+                                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
+                                            <?= htmlspecialchars($ev['lieu']) ?>
+                                        </span>
+                                    </div>
+                                    <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
+                                        <div style="display: flex; align-items: center; gap: 0.25rem; color: #9c27b0; font-weight: 600;">
+                                            <i class="bi bi-arrow-right"></i>
+                                            <span><?= date('d/m', strtotime($ev['date_fin'])) ?></span>
+                                        </div>
+                                    <?php else: ?>
+                                        <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                            <i class="bi bi-clock" style="color: #004b8d;"></i>
+                                            <span><?= date('H:i', strtotime($ev['date_evenement'])) ?></span>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
-                                <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
-                                    <div style="font-size: 0.65rem; color: #9c27b0; font-weight: 600;">
-                                        <i class="bi bi-arrow-right"></i> jusqu'au <?= date('d/m', strtotime($ev['date_fin'])) ?>
-                                    </div>
-                                <?php else: ?>
-                                    <div style="font-size: 0.65rem; color: #888;">
-                                        <?= date('H:i', strtotime($ev['date_evenement'])) ?>
-                                    </div>
-                                <?php endif; ?>
                             </div>
                         </div>
                     </a>
                     <?php endforeach; ?>
                 </div>
-            </div>
-            
-            <div class="preparation-footer" style="padding-top: 0.75rem; font-size: 0.8rem;">
-                <a href="evenements_list.php" style="color: inherit; text-decoration: none;">
-                    <i class="bi bi-arrow-right-circle me-1"></i>
-                    Voir tous les événements
-                </a>
             </div>
         </div>
     </div>
