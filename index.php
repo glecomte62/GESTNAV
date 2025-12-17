@@ -205,10 +205,10 @@ try {
             Inscrivez-vous aux navigations qui vous intéressent !
         </p>
         <div class="gn-hero-badges">
-            <a href="#sorties-a-venir" class="gn-badge" style="text-decoration: none; cursor: pointer;"><i class="bi bi-airplane"></i> <?= $nb_sorties_total ?> sorties à venir</a>
-            <a href="machines.php" class="gn-badge" style="text-decoration: none; cursor: pointer;"><i class="bi bi-airplane-engines"></i> <?= $nb_machines ?> machines actives</a>
-            <a href="annuaire.php" class="gn-badge" style="text-decoration: none; cursor: pointer;"><i class="bi bi-people"></i> <?= $nb_membres ?> membres</a>
-            <a href="evenements_list.php" class="gn-badge" style="text-decoration: none; cursor: pointer;"><i class="bi bi-calendar-event"></i> <?= (int)$nb_evenements_total ?> événements à venir</a>
+            <a href="#sorties-a-venir" class="gn-badge" style="text-decoration: none; cursor: pointer; color: white;"><i class="bi bi-airplane"></i> <?= $nb_sorties_total ?> sorties à venir</a>
+            <a href="machines.php" class="gn-badge" style="text-decoration: none; cursor: pointer; color: white;"><i class="bi bi-airplane-engines"></i> <?= $nb_machines ?> machines actives</a>
+            <a href="annuaire.php" class="gn-badge" style="text-decoration: none; cursor: pointer; color: white;"><i class="bi bi-people"></i> <?= $nb_membres ?> membres</a>
+            <a href="evenements_list.php" class="gn-badge" style="text-decoration: none; cursor: pointer; color: white;"><i class="bi bi-calendar-event"></i> <?= (int)$nb_evenements_total ?> événements à venir</a>
         </div>
         
         <?php if (count($evenements) > 0): ?>
