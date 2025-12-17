@@ -240,7 +240,7 @@ try {
                 
                 <div style="overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; 
                             scrollbar-width: thin; margin: 0 -0.5rem; padding: 0 0.5rem;">
-                    <div style="display: flex; gap: 1rem; padding: 0.25rem 0 0.5rem 0;">
+                    <div style="display: flex; gap: 1rem; padding: 0.25rem 0 0.5rem 0; animation: scrollEvents 30s linear infinite;">
                         <?php foreach ($evenements as $ev): ?>
                         <a href="evenement_inscription_detail.php?id=<?= $ev['id'] ?>" 
                            style="text-decoration: none; color: inherit; flex-shrink: 0;">
@@ -248,8 +248,80 @@ try {
                                         box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #f0f0f0;
                                         width: 300px; transition: all 0.3s; cursor: pointer; height: 110px;
                                         display: flex; align-items: stretch; gap: 1rem;"
-                                 onmouseover="this.style.transform='translateY(-4px) scale(1.02)'; this.style.boxShadow='0 8px 20px rgba(156,39,176,0.15)'; this.style.borderColor='#9c27b0'"
-                                 onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'; this.style.borderColor='#f0f0f0'">
+                                 onmouseover="this.parentElement.parentElement.style.animationPlayState='paused'; this.style.transform='translateY(-4px) scale(1.02)'; this.style.boxShadow='0 8px 20px rgba(156,39,176,0.15)'; this.style.borderColor='#9c27b0'"
+                                 onmouseout="this.parentElement.parentElement.style.animationPlayState='running'; this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'; this.style.borderColor='#f0f0f0'">
+                                
+                                <!-- Date Block -->
+                                <div style="background: linear-gradient(135deg, #004b8d, #00a0c6); border-radius: 0.75rem; 
+                                            padding: 0.75rem 0.5rem; text-align: center; min-width: 60px; max-width: 60px;
+                                            display: flex; flex-direction: column; justify-content: center; align-items: center;
+                                            box-shadow: 0 2px 8px rgba(0,75,141,0.3);">
+                                    <div style="color: white; font-weight: 800; font-size: 1.75rem; line-height: 1; margin-bottom: 0.25rem;">
+                                        <?= date('d', strtotime($ev['date_evenement'])) ?>
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.95); font-size: 0.7rem; text-transform: uppercase; 
+                                                font-weight: 700; letter-spacing: 0.5px;">
+                                        <?= strtoupper(substr(strftime('%B', strtotime($ev['date_evenement'])), 0, 3)) ?>
+                                    </div>
+                                </div>
+                                
+                                <!-- Content Block -->
+                                <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                        <span class="badge" style="background: linear-gradient(135deg, #9c27b0, #ba68c8); 
+                                                                    font-size: 0.65rem; padding: 0.25rem 0.6rem; font-weight: 600;
+                                                                    box-shadow: 0 1px 3px rgba(156,39,176,0.3);">
+                                            <?= htmlspecialchars(ucfirst($ev['type'])) ?>
+                                        </span>
+                                        <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
+                                            <span style="font-size: 0.65rem; color: #9c27b0; font-weight: 700; 
+                                                         background: rgba(156,39,176,0.1); padding: 0.25rem 0.5rem; 
+                                                         border-radius: 0.25rem;">
+                                                <i class="bi bi-calendar-range"></i> Multi-jours
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <div style="font-weight: 700; font-size: 1rem; color: #1a1a1a; margin-bottom: 0.5rem; 
+                                                line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; 
+                                                -webkit-box-orient: vertical; overflow: hidden;">
+                                        <?= htmlspecialchars($ev['titre']) ?>
+                                    </div>
+                                    
+                                    <div style="display: flex; align-items: center; gap: 1rem; font-size: 0.75rem; color: #666;">
+                                        <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                            <i class="bi bi-geo-alt-fill" style="color: #004b8d;"></i>
+                                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
+                                                <?= htmlspecialchars($ev['lieu']) ?>
+                                            </span>
+                                        </div>
+                                        <?php if (!empty($ev['is_multi_day']) && !empty($ev['date_fin'])): ?>
+                                            <div style="display: flex; align-items: center; gap: 0.25rem; color: #9c27b0; font-weight: 600;">
+                                                <i class="bi bi-arrow-right"></i>
+                                                <span><?= date('d/m', strtotime($ev['date_fin'])) ?></span>
+                                            </div>
+                                        <?php else: ?>
+                                            <div style="display: flex; align-items: center; gap: 0.25rem;">
+                                                <i class="bi bi-clock" style="color: #004b8d;"></i>
+                                                <span><?= date('H:i', strtotime($ev['date_evenement'])) ?></span>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        <?php endforeach; ?>
+                        
+                        <!-- Dupliquer pour le défilement infini -->
+                        <?php foreach ($evenements as $ev): ?>
+                        <a href="evenement_inscription_detail.php?id=<?= $ev['id'] ?>" 
+                           style="text-decoration: none; color: inherit; flex-shrink: 0;">
+                            <div style="background: white; border-radius: 1rem; padding: 1rem; 
+                                        box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid #f0f0f0;
+                                        width: 300px; transition: all 0.3s; cursor: pointer; height: 110px;
+                                        display: flex; align-items: stretch; gap: 1rem;"
+                                 onmouseover="this.parentElement.parentElement.style.animationPlayState='paused'; this.style.transform='translateY(-4px) scale(1.02)'; this.style.boxShadow='0 8px 20px rgba(156,39,176,0.15)'; this.style.borderColor='#9c27b0'"
+                                 onmouseout="this.parentElement.parentElement.style.animationPlayState='running'; this.style.transform='translateY(0) scale(1)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'; this.style.borderColor='#f0f0f0'">
                                 
                                 <!-- Date Block -->
                                 <div style="background: linear-gradient(135deg, #004b8d, #00a0c6); border-radius: 0.75rem; 
@@ -315,6 +387,17 @@ try {
                 </div>
             </div>
         </div>
+        
+        <style>
+            @keyframes scrollEvents {
+                0% {
+                    transform: translateX(0);
+                }
+                100% {
+                    transform: translateX(calc(-50%));
+                }
+            }
+        </style>
         <?php endif; ?>
     </div>
     
