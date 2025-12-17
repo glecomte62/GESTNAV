@@ -187,9 +187,9 @@ try {
 $nb_sorties_total = count($sorties);
 // Compter les événements à venir (toutes, pas seulement les 3 affichés)
 try {
-    $nb_evenements_total = $pdo->query(
-        "SELECT COUNT(*) as c FROM evenements WHERE statut IN ('prévu','en_cours') AND date_evenement >= ?"
-    )->fetch()['c'] ?? 0;
+    $stmt_count = $pdo->prepare("SELECT COUNT(*) as c FROM evenements WHERE statut IN ('prévu','en_cours') AND date_evenement >= ?");
+    $stmt_count->execute([$now]);
+    $nb_evenements_total = $stmt_count->fetch()['c'] ?? 0;
 } catch (Exception $e) {
     $nb_evenements_total = 0;
 }
