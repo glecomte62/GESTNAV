@@ -151,16 +151,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Fonction pour filtrer les items admin (ne concerne pas les utilisateurs finaux)
             function isAdminFeature($item) {
                 $adminKeywords = [
-                    'admin', 'administration', 'validation', 'validée', 'refusée', 'refuser',
                     'interface d\'administration', 'page d\'administration', 'modal de détails',
-                    'preinscription', 'pré-inscription', 'candidat', 'candidature',
+                    'inscriptions_admin.php', 'validation des pré-inscriptions',
                     'migration', 'script', 'setup', 'install', 'deploy', 'debug',
                     'database', 'table', 'colonne', 'champ', 'schema', 'SQL',
                     'architecture', 'organisation du code', 'nettoyage', 'archivage',
-                    'logs', 'historique emails', 'notification aux administrateurs',
-                    'bouton "valider"', 'bouton "refuser"', 'filtres rapides',
-                    'tableau de bord', 'statistiques en temps réel', 'config',
-                    'PHPMailer', 'SMTP', 'Brevo', 'mail_helper'
+                    'logs_operations', 'logs_connexions', 'logs_documents', 'logs_affectations',
+                    'notification aux administrateurs', 'bouton "valider"', 'bouton "refuser"',
+                    'filtres rapides admin', 'statistiques en temps réel',
+                    'PHPMailer', 'SMTP', 'Brevo', 'mail_helper', 'config.php',
+                    'fichier de configuration', 'paramètres serveur'
                 ];
                 
                 $lowerItem = mb_strtolower($item);
