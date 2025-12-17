@@ -63,7 +63,15 @@ $total_personnes = count($confirmees) + array_sum(array_map(fn($i) => $i['nb_acc
                 </div>
                 <div style="padding: 1.5rem;">
                     <p><strong>Type :</strong> <span class="badge bg-info"><?= $evt['type'] ?></span></p>
-                    <p><strong>Date et heure :</strong> <?= date('d/m/Y à H:i', strtotime($evt['date_evenement'])) ?></p>
+                    <p>
+                        <strong>Date<?= !empty($evt['is_multi_day']) && !empty($evt['date_fin']) ? 's' : ' et heure' ?> :</strong> 
+                        <?php if (!empty($evt['is_multi_day']) && !empty($evt['date_fin'])): ?>
+                            Du <?= date('d/m/Y à H:i', strtotime($evt['date_evenement'])) ?><br>
+                            au <?= date('d/m/Y à H:i', strtotime($evt['date_fin'])) ?>
+                        <?php else: ?>
+                            <?= date('d/m/Y à H:i', strtotime($evt['date_evenement'])) ?>
+                        <?php endif; ?>
+                    </p>
                     <p><strong>Lieu :</strong> <?= htmlspecialchars($evt['lieu']) ?></p>
                     <p><strong>Statut :</strong> <span class="badge bg-secondary"><?= $evt['statut'] ?></span></p>
                     

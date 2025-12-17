@@ -66,7 +66,17 @@ $evenements_past = $stmt_past->fetchAll(PDO::FETCH_ASSOC);
                             </div>
                         <?php endif; ?>
                         <div style="padding: 1.5rem; flex-grow: 1;">
-                            <p><i class="bi bi-calendar3"></i> <strong><?= date('d/m/Y', strtotime($evt['date_evenement'])) ?> à <?= date('H:i', strtotime($evt['date_evenement'])) ?></strong></p>
+                            <p>
+                                <i class="bi bi-calendar3"></i> 
+                                <strong>
+                                    <?php if (!empty($evt['is_multi_day']) && !empty($evt['date_fin'])): ?>
+                                        Du <?= date('d/m/Y', strtotime($evt['date_evenement'])) ?><br>
+                                        au <?= date('d/m/Y', strtotime($evt['date_fin'])) ?>
+                                    <?php else: ?>
+                                        <?= date('d/m/Y', strtotime($evt['date_evenement'])) ?> à <?= date('H:i', strtotime($evt['date_evenement'])) ?>
+                                    <?php endif; ?>
+                                </strong>
+                            </p>
                             <p><i class="bi bi-geo-alt"></i> <?= htmlspecialchars($evt['lieu']) ?></p>
                             
                             <?php if ($evt['description']): ?>
@@ -120,7 +130,17 @@ $evenements_past = $stmt_past->fetchAll(PDO::FETCH_ASSOC);
                             </div>
                         <?php endif; ?>
                         <div style="padding: 1.5rem; flex-grow: 1;">
-                            <p><i class="bi bi-calendar3"></i> <strong><?= date('d/m/Y', strtotime($evt['date_evenement'])) ?></strong></p>
+                            <p>
+                                <i class="bi bi-calendar3"></i> 
+                                <strong>
+                                    <?php if (!empty($evt['is_multi_day']) && !empty($evt['date_fin'])): ?>
+                                        Du <?= date('d/m/Y', strtotime($evt['date_evenement'])) ?><br>
+                                        au <?= date('d/m/Y', strtotime($evt['date_fin'])) ?>
+                                    <?php else: ?>
+                                        <?= date('d/m/Y', strtotime($evt['date_evenement'])) ?>
+                                    <?php endif; ?>
+                                </strong>
+                            </p>
                             <p><i class="bi bi-geo-alt"></i> <?= htmlspecialchars($evt['lieu']) ?></p>
                             
                             <div style="margin-top: auto; padding-top: 1rem; border-top: 1px solid #ddd;">

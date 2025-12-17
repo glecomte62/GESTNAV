@@ -25,10 +25,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     $description = $_POST['description'] ?? '';
     $type = $_POST['type'] ?? 'reunion';
     $date_evenement = $_POST['date_evenement'] ?? '';
+    $date_fin = $_POST['date_fin'] ?? '';
     $date_limite = $_POST['date_limite'] ?? '';
     $lieu = $_POST['lieu'] ?? '';
     $adresse = $_POST['adresse'] ?? '';
     $statut = $_POST['statut'] ?? 'prévu';
+    
+    // Vérifier si c'est un événement multi-jours
+    $is_multi_day = 0;
+    $date_fin_param = null;
+    if (!empty($date_fin) && $date_fin > $date_evenement) {
+        $is_multi_day = 1;
+        $date_fin_param = $date_fin;
+    }
 
     if (!$titre || !$date_evenement || !$lieu) {
         $error = "Veuillez remplir tous les champs obligatoires.";
@@ -61,11 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
             $date_limite_param = ($date_limite === '') ? null : $date_limite;
 
             if ($hasCoverColumn && $new_cover_filename) {
-                $upd = $pdo->prepare("UPDATE evenements SET titre = ?, description = ?, type = ?, date_evenement = ?, date_limite_inscription = ?, lieu = ?, adresse = ?, statut = ?, cover_filename = ? WHERE id = ?");
-                $upd->execute([$titre, $description, $type, $date_evenement, $date_limite_param, $lieu, $adresse, $statut, $new_cover_filename, $evenement_id]);
+                $upd = $pdo->prepare("UPDATE evenements SET titre = ?, description = ?, type = ?, date_evenement = ?, date_fin = ?, is_multi_day = ?, date_limite_inscription = ?, lieu = ?, adresse = ?, statut = ?, cover_filename = ? WHERE id = ?");
+                $upd->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $date_limite_param, $lieu, $adresse, $statut, $new_cover_filename, $evenement_id]);
             } else {
-                $upd = $pdo->prepare("UPDATE evenements SET titre = ?, description = ?, type = ?, date_evenement = ?, date_limite_inscription = ?, lieu = ?, adresse = ?, statut = ? WHERE id = ?");
-                $upd->execute([$titre, $description, $type, $date_evenement, $date_limite_param, $lieu, $adresse, $statut, $evenement_id]);
+                $upd = $pdo->prepare("UPDATE evenements SET titre = ?, description = ?, type = ?, date_evenement = ?, date_fin = ?, is_multi_day = ?, date_limite_inscription = ?, lieu = ?, adresse = ?, statut = ? WHERE id = ?");
+                $upd->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $date_limite_param, $lieu, $adresse, $statut, $evenement_id]);
             }
             $success = "Événement mis à jour avec succès !";
 
@@ -162,20 +171,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_cover'])) {
             
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label class="form-label">Date et heure de l'événement *</label>
+                    <label class="form-label">Date et heure de début *</label>
                     <input type="datetime-local" name="date_evenement" class="form-control" 
                            value="<?= date('Y-m-d\TH:i', strtotime($evt['date_evenement'])) ?>" required>
                 </div>
                 
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Date et heure de fin</label>
+                    <input type="datetime-local" name="date_fin" class="form-control" 
+                           value="<?= !empty($evt['date_fin']) ? date('Y-m-d\TH:i', strtotime($evt['date_fin'])) : '' ?>">
+                    <small class="form-text text-muted">Pour les événements sur plusieurs jours</small>
+                </div>
+            </div>
+            
+            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Date limite d'inscription</label>
                     <input type="datetime-local" name="date_limite" class="form-control" 
                            value="<?= $evt['date_limite_inscription'] ? date('Y-m-d\TH:i', strtotime($evt['date_limite_inscription'])) : '' ?>">
                     <small class="form-text text-muted">Au-delà de cette date, l'inscription ne sera plus possible</small>
                 </div>
-            </div>
-            
-            <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Statut *</label>
                     <select name="statut" class="form-select" required>

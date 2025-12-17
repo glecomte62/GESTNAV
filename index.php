@@ -2,6 +2,10 @@
 require 'header.php';
 require_login();
 
+// Afficher le bandeau démo si compte de démonstration
+require_once 'demo_helper.php';
+show_demo_banner();
+
 $now = date('Y-m-d H:i:s');
 
 // Récupérer les sorties en cours et à venir
@@ -124,6 +128,8 @@ try {
         e.titre,
         e.description,
         e.date_evenement,
+        e.date_fin,
+        e.is_multi_day,
         e.type,
         e.lieu,
         e.cover_filename,
@@ -150,6 +156,8 @@ try {
         e.titre,
         e.description,
         e.date_evenement,
+        e.date_fin,
+        e.is_multi_day,
         e.type,
         e.lieu,
         e.cover_filename,
@@ -425,6 +433,8 @@ foreach ($evenements as $e) {
         'id' => $e['id'],
         'title' => $e['titre'],
         'date' => $e['date_evenement'],
+        'end'  => $e['date_fin'] ?? null,
+        'multi'=> (int)($e['is_multi_day'] ?? 0),
         'location' => $e['lieu'],
         'desc' => $e['description'] ?? '',
         'inscrits' => (int)($e['confirmees'] ?? 0),
@@ -629,6 +639,8 @@ foreach ($evenementsPassees as $e) {
         'id' => $e['id'],
         'title' => $e['titre'],
         'date' => $e['date_evenement'],
+        'end'  => $e['date_fin'] ?? null,
+        'multi'=> (int)($e['is_multi_day'] ?? 0),
         'location' => $e['lieu'],
         'desc' => $e['description'] ?? '',
         'inscrits' => (int)($e['confirmees'] ?? 0),

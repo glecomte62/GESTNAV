@@ -29,8 +29,18 @@ $evenements = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $description = $_POST['description'] ?? '';
         $type = $_POST['type'] ?? 'reunion';
         $date_evenement = $_POST['date_evenement'] ?? '';
+        $date_fin = $_POST['date_fin'] ?? '';
         $lieu = $_POST['lieu'] ?? '';
         $adresse = $_POST['adresse'] ?? '';
+        
+        // Vérifier si c'est un événement multi-jours
+        $is_multi_day = 0;
+        $date_fin_param = null;
+        if (!empty($date_fin) && $date_fin > $date_evenement) {
+            $is_multi_day = 1;
+            $date_fin_param = $date_fin;
+        }
+        
         if (!$titre || !$date_evenement || !$lieu) {
             $error = true;
             $message = "Veuillez remplir tous les champs obligatoires.";
@@ -56,11 +66,11 @@ $evenements = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     }
                 }
                 if ($hasCover && $cover_filename) {
-                    $ins = $pdo->prepare("INSERT INTO evenements (titre, description, type, date_evenement, lieu, adresse, cover_filename, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                    $ins->execute([$titre, $description, $type, $date_evenement, $lieu, $adresse, $cover_filename, $_SESSION['user_id']]);
+                    $ins = $pdo->prepare("INSERT INTO evenements (titre, description, type, date_evenement, date_fin, is_multi_day, lieu, adresse, cover_filename, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $ins->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $lieu, $adresse, $cover_filename, $_SESSION['user_id']]);
                 } else {
-                    $ins = $pdo->prepare("INSERT INTO evenements (titre, description, type, date_evenement, lieu, adresse, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                    $ins->execute([$titre, $description, $type, $date_evenement, $lieu, $adresse, $_SESSION['user_id']]);
+                    $ins = $pdo->prepare("INSERT INTO evenements (titre, description, type, date_evenement, date_fin, is_multi_day, lieu, adresse, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $ins->execute([$titre, $description, $type, $date_evenement, $date_fin_param, $is_multi_day, $lieu, $adresse, $_SESSION['user_id']]);
                 }
                 $message = "Événement créé";
             } catch (Exception $e) {
@@ -140,10 +150,17 @@ $evenements = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Date et heure *</label>
-                            <input type="datetime-local" name="date_evenement" class="form-control" required>
+                            <label class="form-label">Date et heure de début *</label>
+                            <input type="datetime-local" name="date_evenement" class="form-control" id="date_evenement" required>
                         </div>
                         <div class="col-md-6 mb-3">
+                            <label class="form-label">Date et heure de fin</label>
+                            <input type="datetime-local" name="date_fin" class="form-control" id="date_fin">
+                            <div class="form-text">Uniquement pour les événements sur plusieurs jours</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
                             <label class="form-label">Lieu *</label>
                             <input type="text" name="lieu" class="form-control" required>
                         </div>
@@ -198,7 +215,14 @@ $evenements = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                             <strong><?= htmlspecialchars($evt['titre']) ?></strong>
                                         </div>
                                     </td>
-                                    <td><?= date('d/m/Y H:i', strtotime($evt['date_evenement'])) ?></td>
+                                    <td>
+                                        <?php if (!empty($evt['is_multi_day']) && !empty($evt['date_fin'])): ?>
+                                            Du <?= date('d/m/Y', strtotime($evt['date_evenement'])) ?><br>
+                                            au <?= date('d/m/Y', strtotime($evt['date_fin'])) ?>
+                                        <?php else: ?>
+                                            <?= date('d/m/Y H:i', strtotime($evt['date_evenement'])) ?>
+                                        <?php endif; ?>
+                                    </td>
                                     <td><span class="badge bg-info"><?= $evt['type'] ?></span></td>
                                     <td><?= htmlspecialchars($evt['lieu']) ?></td>
                                     <td>
