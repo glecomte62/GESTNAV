@@ -1,0 +1,17 @@
+CORRECTION URGENTE - Page blanche sur envoyer_email.php
+
+Le fichier envoyer_email.php du serveur cause une page blanche.
+
+SOLUTION RAPIDE via FTP:
+1. Connectez-vous à votre gestionnaire de fichiers / FTP
+2. Remplacez le fichier envoyer_email.php sur le serveur par celui du dossier local
+   (Le fichier local a été corrigé et ne contient plus le code de debug problématique)
+
+OU via ligne de commande si vous avez accès SSH:
+   cd /home/gestnav/www/
+   # Puis éditez envoyer_email.php et supprimez les lignes de DEBUG
+
+OU copiez ce fichier corrigé sur le serveur via votre interface d'hébergement.
+
+Le fichier local correct est prêt dans:
+/Users/guillaumelecomte/Library/Mobile Documents/com~apple~CloudDocs/Documents/VSCODE/GESTNAV/envoyer_email.php
