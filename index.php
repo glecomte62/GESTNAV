@@ -61,24 +61,34 @@ try {
     foreach ($sorties as &$sortie) {
         $sortie['is_full'] = false;
         try {
-            // Récupérer le nombre total de places disponibles et occupées
+            // Récupérer toutes les machines de la sortie
             $stmtMachines = $pdo->prepare("
                 SELECT 
-                    m.capacite,
-                    COUNT(sa.id) as places_prises
+                    sm.id as sortie_machine_id,
+                    m.immatriculation
                 FROM sortie_machines sm
                 JOIN machines m ON m.id = sm.machine_id
-                LEFT JOIN sortie_assignations sa ON sa.sortie_machine_id = sm.id
                 WHERE sm.sortie_id = ?
-                GROUP BY sm.id, m.capacite
             ");
             $stmtMachines->execute([$sortie['id']]);
             $machines = $stmtMachines->fetchAll();
             
+            // Capacité fixe : 2 places par machine (pilote + passager)
+            $capacite_par_machine = 2;
+            
             if (count($machines) > 0) {
                 $allFull = true;
                 foreach ($machines as $machine) {
-                    if ($machine['places_prises'] < $machine['capacite']) {
+                    // Compter les assignations pour cette machine spécifiquement
+                    $stmtCount = $pdo->prepare("
+                        SELECT COUNT(*) as nb
+                        FROM sortie_assignations
+                        WHERE sortie_machine_id = ?
+                    ");
+                    $stmtCount->execute([$machine['sortie_machine_id']]);
+                    $places_prises = (int)$stmtCount->fetch()['nb'];
+                    
+                    if ($places_prises < $capacite_par_machine) {
                         $allFull = false;
                         break;
                     }
@@ -726,7 +736,7 @@ usort($agenda, function($a, $b) {
                         
                         <?php if ($it['kind'] === 'sortie' && !empty($it['is_full'])): ?>
                         <!-- Bandeau COMPLET -->
-                        <div style="position: absolute; top: 30px; left: -40px; width: 200px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #000; text-align: center; transform: rotate(-45deg); z-index: 1000; padding: 8px 0; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); border: 2px solid rgba(255, 255, 255, 0.3);">
+                        <div style="position: absolute; top: 30px; left: -40px; width: 200px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; text-align: center; transform: rotate(-45deg); z-index: 1000; padding: 8px 0; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); border: 2px solid rgba(255, 255, 255, 0.3);">
                             COMPLET
                         </div>
                         <?php endif; ?>
@@ -734,17 +744,17 @@ usort($agenda, function($a, $b) {
                         <?php if ($it['kind'] === 'evenement'): ?>
                             <div style="width:100%; aspect-ratio:16/9; background:#f2f6fc; overflow:hidden;">
                                 <?php if (!empty($it['cover'])): ?>
-                                    <img src="uploads/events/<?= htmlspecialchars($it['cover']) ?>" alt="Image événement" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                    <img loading="lazy" src="uploads/events/<?= htmlspecialchars($it['cover']) ?>" alt="Image événement" style="width:100%; height:100%; object-fit:cover; display:block;">
                                 <?php else: ?>
-                                    <img src="assets/img/Ulm.jpg" alt="Illustration ULM" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                    <img loading="lazy" src="assets/img/Ulm.jpg" alt="Illustration ULM" style="width:100%; height:100%; object-fit:cover; display:block;">
                                 <?php endif; ?>
                             </div>
                         <?php elseif ($it['kind'] === 'sortie'): ?>
                             <div style="width:100%; aspect-ratio:16/9; background:#f2f6fc; overflow:hidden;">
                                 <?php if (!empty($it['photo'])): ?>
-                                    <img src="uploads/sorties/<?= htmlspecialchars($it['photo']) ?>" alt="Photo sortie" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                    <img loading="lazy" src="uploads/sorties/<?= htmlspecialchars($it['photo']) ?>" alt="Photo sortie" style="width:100%; height:100%; object-fit:cover; display:block;">
                                 <?php else: ?>
-                                    <img src="assets/img/Ulm.jpg" alt="Illustration ULM" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                    <img loading="lazy" src="assets/img/Ulm.jpg" alt="Illustration ULM" style="width:100%; height:100%; object-fit:cover; display:block;">
                                 <?php endif; ?>
                             </div>
                         <?php endif; ?>
@@ -941,9 +951,9 @@ usort($agendaPassee, function($a, $b) {
                         <?php if ($it['kind'] === 'evenement'): ?>
                             <div style="width:100%; aspect-ratio:16/9; background:#f2f6fc; overflow:hidden; position:relative;">
                                 <?php if (!empty($it['cover'])): ?>
-                                    <img src="uploads/events/<?= htmlspecialchars($it['cover']) ?>" alt="Image événement" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                    <img loading="lazy" src="uploads/events/<?= htmlspecialchars($it['cover']) ?>" alt="Image événement" style="width:100%; height:100%; object-fit:cover; display:block;">
                                 <?php else: ?>
-                                    <img src="assets/img/Ulm.jpg" alt="Illustration ULM" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                    <img loading="lazy" src="assets/img/Ulm.jpg" alt="Illustration ULM" style="width:100%; height:100%; object-fit:cover; display:block;">
                                 <?php endif; ?>
                                 <div style="position: absolute; top: 8px; right: 8px; background-color: #dc3545; color: white; padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
                                     Terminé
@@ -952,9 +962,9 @@ usort($agendaPassee, function($a, $b) {
                         <?php elseif ($it['kind'] === 'sortie'): ?>
                             <div style="width:100%; aspect-ratio:16/9; background:#f2f6fc; overflow:hidden; position:relative;">
                                 <?php if (!empty($it['photo'])): ?>
-                                    <img src="uploads/sorties/<?= htmlspecialchars($it['photo']) ?>" alt="Photo sortie" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                    <img loading="lazy" src="uploads/sorties/<?= htmlspecialchars($it['photo']) ?>" alt="Photo sortie" style="width:100%; height:100%; object-fit:cover; display:block;">
                                 <?php else: ?>
-                                    <img src="assets/img/Ulm.jpg" alt="Illustration ULM" style="width:100%; height:100%; object-fit:cover; display:block;">
+                                    <img loading="lazy" src="assets/img/Ulm.jpg" alt="Illustration ULM" style="width:100%; height:100%; object-fit:cover; display:block;">
                                 <?php endif; ?>
                                 <div style="position: absolute; top: 8px; right: 8px; background-color: #dc3545; color: white; padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
                                     Terminé
