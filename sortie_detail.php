@@ -556,10 +556,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
         $assign_post = $_POST['assign'] ?? [];
         $has_new_assignments = false;
         
-        // Vérifier s'il y a au moins une affectation valide
+        // Vérifier s'il y a au moins une affectation valide (y compris GUEST)
         foreach ($assign_post as $sm_id => $user_ids) {
             if (!is_array($user_ids)) continue;
-            $user_ids = array_filter($user_ids, fn($v) => $v !== '' && $v !== null && (int)$v > 0);
+            $user_ids = array_filter($user_ids, fn($v) => $v !== '' && $v !== null && ((int)$v > 0 || $v === 'GUEST'));
             if (!empty($user_ids)) {
                 $has_new_assignments = true;
                 break;
@@ -582,9 +582,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
             $sm_id = (int)$sm_id;
             if ($sm_id <= 0 || !is_array($user_ids)) continue;
             
-            // Filtrer et limiter à 2
+            // Filtrer et limiter à 2 (en gardant GUEST)
             $user_ids = array_filter($user_ids, fn($v) => $v !== '' && $v !== null);
-            $user_ids = array_map('intval', $user_ids);
             $user_ids = array_unique($user_ids);
             $user_ids = array_slice($user_ids, 0, 2);
             
@@ -593,6 +592,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
             }
             
             foreach ($user_ids as $uid) {
+                // Ignorer 'GUEST' ici car il sera traité séparément
+                if ($uid === 'GUEST') continue;
+                
+                $uid = (int)$uid;
                 if ($uid <= 0) continue;
                 
                 // Insérer l'affectation
@@ -617,6 +620,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
                 }
                 
                 $slot_counter[$sm_id]++;
+            }
+        }
+        
+        // Traiter les invités
+        $guest_names = $_POST['guest_name'] ?? [];
+        
+        // Créer la table des invités si elle n'existe pas
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS sortie_assignations_guests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sortie_machine_id INT NOT NULL,
+                guest_name VARCHAR(255) NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_sortie_machine (sortie_machine_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        } catch (Throwable $e) {
+            // Table existe déjà
+        }
+        
+        // Supprimer les anciens invités pour cette sortie
+        if ($has_new_assignments) {
+            $stmt = $pdo->prepare("DELETE FROM sortie_assignations_guests WHERE sortie_machine_id IN (SELECT id FROM sortie_machines WHERE sortie_id = ?)");
+            $stmt->execute([$sortie_id]);
+        }
+        
+        // Insérer les nouveaux invités
+        foreach ($guest_names as $sm_id => $guest_name) {
+            $sm_id = (int)$sm_id;
+            $guest_name = trim($guest_name);
+            
+            if ($sm_id > 0 && !empty($guest_name)) {
+                // Vérifier si "GUEST" a été sélectionné pour cette machine
+                $has_guest_selected = false;
+                if (isset($assign_post[$sm_id]) && is_array($assign_post[$sm_id])) {
+                    foreach ($assign_post[$sm_id] as $val) {
+                        if ($val === 'GUEST') {
+                            $has_guest_selected = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if ($has_guest_selected) {
+                    $stmt = $pdo->prepare("INSERT INTO sortie_assignations_guests (sortie_machine_id, guest_name) VALUES (?, ?)");
+                    $stmt->execute([$sm_id, $guest_name]);
+                }
             }
         }
         
