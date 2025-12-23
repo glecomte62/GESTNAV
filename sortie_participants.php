@@ -59,13 +59,43 @@ foreach ($rows_m as $r) {
         $user_id = (int)($r['user_id'] ?? 0);
         $machines_equipes[$sm_id]['equipage'][] = [
             'nom' => trim(($r['membre_prenom'] ?? '') . ' ' . ($r['membre_nom'] ?? '')),
-            'role' => $r['role_onboard'] ?? ''
+            'role' => $r['role_onboard'] ?? '',
+            'is_guest' => false
         ];
         if ($user_id > 0) {
             $affectes_user_ids[$user_id] = true;
         }
         $total_places_affectees++;
     }
+}
+
+// Ajouter les invités aux équipages
+try {
+    $stmt_guests = $pdo->prepare("
+        SELECT 
+            sm.id AS sm_id,
+            g.guest_name
+        FROM sortie_machines sm
+        LEFT JOIN sortie_assignations_guests g ON g.sortie_machine_id = sm.id
+        WHERE sm.sortie_id = ? AND g.guest_name IS NOT NULL
+    ");
+    $stmt_guests->execute([$sortie_id]);
+    $guests = $stmt_guests->fetchAll(PDO::FETCH_ASSOC);
+    
+    foreach ($guests as $guest) {
+        $sm_id = (int)$guest['sm_id'];
+        if (isset($machines_equipes[$sm_id])) {
+            $machines_equipes[$sm_id]['equipage'][] = [
+                'nom' => trim($guest['guest_name']),
+                'role' => 'invité',
+                'is_guest' => true
+            ];
+            $total_places_affectees++;
+        }
+    }
+} catch (Exception $e) {
+    // Table n'existe peut-être pas encore
+    error_log("Erreur récupération invités: " . $e->getMessage());
 }
 
 // Calcul du nombre de places disponibles
