@@ -36,7 +36,8 @@ try {
             s.destination_oaci,
             s.statut,
             s.repas_prevu,
-            s.repas_details,"
+            s.repas_details,
+            s.created_at,"
             . ($hasDestinationId ? " s.destination_id," : "")
             . ($hasUlmBaseId ? " s.ulm_base_id," : "")
             . ($hasDestinationId ? " ad.nom AS dest_nom, ad.lat AS dest_lat, ad.lon AS dest_lon," : "")
@@ -97,6 +98,20 @@ try {
             }
         } catch (Exception $e) {
             error_log("Erreur vérification places sortie " . $sortie['id'] . ": " . $e->getMessage());
+        }
+        
+        // Vérifier si la sortie a été créée il y a moins de 7 jours
+        $sortie['is_new'] = false;
+        if (!empty($sortie['created_at'])) {
+            try {
+                $created = new DateTime($sortie['created_at']);
+                $now_dt = new DateTime();
+                $diff = $now_dt->diff($created);
+                $days = $diff->days;
+                $sortie['is_new'] = ($days < 7);
+            } catch (Exception $e) {
+                error_log("Erreur calcul is_new sortie " . $sortie['id'] . ": " . $e->getMessage());
+            }
         }
     }
     unset($sortie);
@@ -692,6 +707,7 @@ foreach ($sorties as $s) {
         'inscrits' => (int)($s['nb_inscrits'] ?? 0),
         'photo' => $s['photo_filename'] ?? null,
         'is_full' => $s['is_full'] ?? false,
+        'is_new' => $s['is_new'] ?? false,
     ];
 }
 foreach ($evenements as $e) {
@@ -738,6 +754,13 @@ usort($agenda, function($a, $b) {
                         <!-- Bandeau COMPLET -->
                         <div style="position: absolute; top: 30px; left: -40px; width: 200px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; text-align: center; transform: rotate(-45deg); z-index: 1000; padding: 8px 0; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); border: 2px solid rgba(255, 255, 255, 0.3);">
                             COMPLET
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($it['kind'] === 'sortie' && !empty($it['is_new'])): ?>
+                        <!-- Bandeau NOUVEAU -->
+                        <div style="position: absolute; top: 80px; left: -40px; width: 200px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-align: center; transform: rotate(-45deg); z-index: 999; padding: 8px 0; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); border: 2px solid rgba(255, 255, 255, 0.3);">
+                            NOUVEAU
                         </div>
                         <?php endif; ?>
                         
@@ -907,6 +930,7 @@ foreach ($sortiesPassees as $s) {
         'inscrits' => (int)($s['nb_inscrits'] ?? 0),
         'photo' => $s['photo_filename'] ?? null,
         'is_full' => $s['is_full'] ?? false,
+        'is_new' => $s['is_new'] ?? false,
     ];
 }
 foreach ($evenementsPassees as $e) {
@@ -972,6 +996,11 @@ usort($agendaPassee, function($a, $b) {
                                 <?php if (!empty($it['is_full'])): ?>
                                 <div style="position: absolute; top: 30px; left: -40px; transform: rotate(-45deg); background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 8px 60px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 8px rgba(0,0,0,0.3); letter-spacing: 2px; text-align: center;">
                                     COMPLET
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($it['is_new'])): ?>
+                                <div style="position: absolute; top: 80px; left: -40px; transform: rotate(-45deg); background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 60px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 8px rgba(0,0,0,0.3); letter-spacing: 2px; text-align: center;">
+                                    NOUVEAU
                                 </div>
                                 <?php endif; ?>
                             </div>
