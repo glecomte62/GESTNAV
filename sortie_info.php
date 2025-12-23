@@ -153,10 +153,25 @@ try {
     foreach ($allAssign as $row) {
         $sid = (int)$row['sm_id'];
         if (!isset($assignationsBySm[$sid])) $assignationsBySm[$sid] = [];
-        $assignationsBySm[$sid][] = ['prenom'=>$row['prenom']??'', 'nom'=>$row['nom']??'', 'role'=>$row['role_onboard']??''];
+        $assignationsBySm[$sid][] = ['prenom'=>$row['prenom']??'', 'nom'=>$row['nom']??'', 'role'=>$row['role_onboard']??'', 'is_guest'=>false];
     }
 } catch (Throwable $e) {
     // Log mais continue
+}
+
+// Ajouter les invités
+try {
+    $sqlGuests = "SELECT g.sortie_machine_id AS sm_id, g.guest_name FROM sortie_assignations_guests g JOIN sortie_machines sm ON sm.id = g.sortie_machine_id WHERE sm.sortie_id = ? ORDER BY g.sortie_machine_id";
+    $stG = $pdo->prepare($sqlGuests);
+    $stG->execute([$sortie_id]);
+    $allGuests = $stG->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($allGuests as $row) {
+        $sid = (int)$row['sm_id'];
+        if (!isset($assignationsBySm[$sid])) $assignationsBySm[$sid] = [];
+        $assignationsBySm[$sid][] = ['prenom'=>'', 'nom'=>$row['guest_name']??'Invité', 'role'=>'invité', 'is_guest'=>true];
+    }
+} catch (Throwable $e) {
+    // Table n'existe peut-être pas encore
 }
 
 $machRows = [];
