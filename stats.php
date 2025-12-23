@@ -74,32 +74,34 @@ if ($dateFilterSqlEvt) {
 	$participants_evenements = (int)$pdo->query("SELECT COALESCE(SUM(nb_accompagnants + 1),0) FROM evenement_inscriptions WHERE statut='confirmée'")->fetchColumn();
 }
 
-// participations sorties (inscriptions)
+// participations sorties (affectations réelles)
 if ($dateFilterSqlSort) {
-	$stmt = $pdo->prepare("SELECT COUNT(*) FROM sortie_inscriptions si
-						   JOIN sorties s ON s.id = si.sortie_id
+	$stmt = $pdo->prepare("SELECT COUNT(*) FROM sortie_assignations sa
+						   JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id
+						   JOIN sorties s ON s.id = sm.sortie_id
 						   WHERE 1=1 " . $dateFilterSqlSort);
 	$stmt->execute($dateParams);
 	$participants_sorties = (int)$stmt->fetchColumn();
 } else {
-	$participants_sorties = (int)$pdo->query("SELECT COUNT(*) FROM sortie_inscriptions")->fetchColumn();
+	$participants_sorties = (int)$pdo->query("SELECT COUNT(*) FROM sortie_assignations")->fetchColumn();
 }
 
 // --------- Classements par membre ---------
 $users = $pdo->query("SELECT id, nom, prenom FROM users WHERE actif=1")->fetchAll(PDO::FETCH_ASSOC);
 
-// sorties par user
+// sorties par user (affectations réelles)
 if ($dateFilterSqlSort) {
-	$stmt = $pdo->prepare("SELECT si.user_id, COUNT(*) AS nb
-						   FROM sortie_inscriptions si
-						   JOIN sorties s ON s.id = si.sortie_id
+	$stmt = $pdo->prepare("SELECT sa.user_id, COUNT(*) AS nb
+						   FROM sortie_assignations sa
+						   JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id
+						   JOIN sorties s ON s.id = sm.sortie_id
 						   WHERE 1=1 " . $dateFilterSqlSort . "
-						   GROUP BY si.user_id");
+						   GROUP BY sa.user_id");
 	$stmt->execute($dateParams);
 	$map_sorties = [];
 	foreach ($stmt->fetchAll(PDO::FETCH_NUM) as $r) { $map_sorties[(string)$r[0]] = (int)$r[1]; }
 } else {
-	$map_sorties = fetch_keypair($pdo, "SELECT user_id, COUNT(*) FROM sortie_inscriptions GROUP BY user_id");
+	$map_sorties = fetch_keypair($pdo, "SELECT user_id, COUNT(*) FROM sortie_assignations GROUP BY user_id");
 }
 
 // événements par user (accompagnants inclus)
@@ -161,9 +163,10 @@ if ($dateFilterSqlEvt) {
 }
 
 if ($dateFilterSqlSort) {
-	$stmt = $pdo->prepare("SELECT s.id, s.titre, COUNT(si.id) AS total
+	$stmt = $pdo->prepare("SELECT s.id, s.titre, COUNT(sa.id) AS total
 						   FROM sorties s
-						   LEFT JOIN sortie_inscriptions si ON si.sortie_id = s.id
+						   LEFT JOIN sortie_machines sm ON sm.sortie_id = s.id
+						   LEFT JOIN sortie_assignations sa ON sa.sortie_machine_id = sm.id
 						   WHERE 1=1 " . $dateFilterSqlSort . "
 						   GROUP BY s.id
 						   ORDER BY total DESC
@@ -171,9 +174,10 @@ if ($dateFilterSqlSort) {
 	$stmt->execute($dateParams);
 	$best_sortie = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
 } else {
-	$best_sortie = $pdo->query("SELECT s.id, s.titre, COUNT(si.id) AS total
+	$best_sortie = $pdo->query("SELECT s.id, s.titre, COUNT(sa.id) AS total
 								FROM sorties s
-								LEFT JOIN sortie_inscriptions si ON si.sortie_id = s.id
+								LEFT JOIN sortie_machines sm ON sm.sortie_id = s.id
+								LEFT JOIN sortie_assignations sa ON sa.sortie_machine_id = sm.id
 								GROUP BY s.id
 								ORDER BY total DESC
 								LIMIT 1")->fetch(PDO::FETCH_ASSOC);

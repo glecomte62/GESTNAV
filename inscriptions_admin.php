@@ -43,6 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Libérer affectations
                 $q = $pdo->prepare("DELETE sa FROM sortie_assignations sa JOIN sortie_machines sm ON sm.id=sa.sortie_machine_id WHERE sm.sortie_id=? AND sa.user_id=?");
                 $q->execute([$sortie_id, $user_id]);
+                // Supprimer les pré-inscriptions (préférences)
+                try {
+                    $delPre = $pdo->prepare("DELETE FROM sortie_preinscriptions WHERE sortie_id=? AND user_id=?");
+                    $delPre->execute([$sortie_id, $user_id]);
+                } catch (Throwable $e) {
+                    // Table peut ne pas exister
+                }
                 // Supprimer l'inscription
                 $del = $pdo->prepare("DELETE FROM sortie_inscriptions WHERE sortie_id=? AND user_id=?");
                 $del->execute([$sortie_id, $user_id]);

@@ -163,7 +163,7 @@ function gestnav_send_mail(PDO $pdo, $to, string $subject, string $html_body, ?s
             
             // Enregistrer dans email_logs
             $sender_id = $_SESSION['user_id'] ?? null;
-            $stmtLog = $pdo->prepare("INSERT INTO email_logs (sender_id, recipient_email, subject, message_html, message_text, status, created_at) VALUES (?, ?, ?, ?, ?, 'sent', NOW())");
+            $stmtLog = $pdo->prepare("INSERT INTO email_logs (sender_id, recipient, subject, body_html, body_text, status, created_at) VALUES (?, ?, ?, ?, ?, 'sent', NOW())");
             $stmtLog->execute([
                 $sender_id,
                 $recipient_emails,

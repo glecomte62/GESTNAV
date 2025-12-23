@@ -585,6 +585,7 @@ require 'header.php';
                         <td><?= htmlspecialchars($member['qualification'] ?? '-') ?></td>
                         <td>
                             <div class="action-buttons">
+                                <a href="membre_stats.php?id=<?= $member['id'] ?>" class="btn-action btn-info" style="background: #3b82f6;">📊 Stats</a>
                                 <a href="editer_membre.php?id=<?= $member['id'] ?>" class="btn-action btn-edit">✏️ Éditer</a>
                                 <form method="post" style="display: inline;" onsubmit="return confirm('⚠️ Êtes-vous sûr?');">
                                     <input type="hidden" name="action" value="delete_member">

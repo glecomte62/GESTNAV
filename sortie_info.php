@@ -146,14 +146,14 @@ if ($hasUlmBaseId && !empty($sortie['ulm_base_id'])) {
 // Machines + équipages
 $assignationsBySm = [];
 try {
-    $sql = "SELECT sa.sortie_machine_id AS sm_id, COALESCE(u.prenom, '?') AS prenom, COALESCE(u.nom, 'À valider') AS nom, sa.role_onboard FROM sortie_assignations sa LEFT JOIN users u ON u.id = sa.user_id JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id WHERE sm.sortie_id = ? ORDER BY sa.sortie_machine_id, u.nom, u.prenom";
+    $sql = "SELECT sa.sortie_machine_id AS sm_id, sa.user_id, COALESCE(u.prenom, '?') AS prenom, COALESCE(u.nom, 'Confirmé') AS nom, sa.role_onboard FROM sortie_assignations sa LEFT JOIN users u ON u.id = sa.user_id JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id WHERE sm.sortie_id = ? ORDER BY sa.sortie_machine_id, u.nom, u.prenom";
     $stA = $pdo->prepare($sql); 
     $stA->execute([$sortie_id]);
     $allAssign = $stA->fetchAll(PDO::FETCH_ASSOC);
     foreach ($allAssign as $row) {
         $sid = (int)$row['sm_id'];
         if (!isset($assignationsBySm[$sid])) $assignationsBySm[$sid] = [];
-        $assignationsBySm[$sid][] = ['prenom'=>$row['prenom']??'', 'nom'=>$row['nom']??'', 'role'=>$row['role_onboard']??'', 'is_guest'=>false];
+        $assignationsBySm[$sid][] = ['user_id'=>$row['user_id']??null, 'prenom'=>$row['prenom']??'', 'nom'=>$row['nom']??'', 'role'=>$row['role_onboard']??'', 'is_guest'=>false];
     }
 } catch (Throwable $e) {
     // Log mais continue
@@ -214,6 +214,27 @@ try {
         }
     }
 } catch (Throwable $e) {}
+
+// Extraire les user_ids des participants affectés
+$affectes_user_ids = [];
+foreach ($assignationsBySm as $sm_id => $equipage) {
+    foreach ($equipage as $member) {
+        if (!empty($member['user_id']) && is_numeric($member['user_id'])) {
+            $affectes_user_ids[(int)$member['user_id']] = true;
+        }
+    }
+}
+
+// Séparer les participants affectés de la liste d'attente
+$participants_affectes = [];
+$participants_waitlist = [];
+foreach ($inscrits as $inscrit) {
+    if (isset($affectes_user_ids[(int)$inscrit['id']])) {
+        $participants_affectes[] = $inscrit;
+    } else {
+        $participants_waitlist[] = $inscrit;
+    }
+}
 
 // Calcul distance/ETA si possible (avant header pour utilisation dans header de page)
 $club_oaci = defined('GESTNAV_CLUB_OACI') ? GESTNAV_CLUB_OACI : 'LFQJ';
@@ -389,15 +410,13 @@ include 'header.php';
                                             <?php if ($list): ?>
                                                 <div class="roles-badges mt-2">
                                                     <?php foreach ($list as $p): ?>
-                                                        <?php $role = strtolower($p['role'] ?? ''); $isValider = ($role === 'passager' || $p['nom'] === 'À valider'); ?>
+                                                        <?php 
+                                                            $role = strtolower($p['role'] ?? ''); 
+                                                            $roleDisplay = ($role === 'pilote') ? 'pilote' : (($role === 'copilote') ? 'copilote' : (($role === 'invité') ? 'invité' : 'CDB ou COPI'));
+                                                        ?>
                                                         <div style="display:flex; gap:0.5rem; align-items:center; margin-bottom:0.5rem; flex-wrap:wrap;">
-                                                            <?php if (!$isValider): ?>
-                                                                <span class="<?= ($role === 'pilote') ? 'role-badge role-pilote' : (($role === 'copilote') ? 'role-badge role-copilote' : 'role-badge role-valider') ?>"><?= htmlspecialchars(trim(($p['prenom'] ?? '') . ' ' . ($p['nom'] ?? ''))) ?></span>
-                                                                <span class="role-badge" style="background:#6b7280; color:white; font-size:0.75rem; padding:0.25rem 0.5rem;"><?= htmlspecialchars($role === 'pilote' ? 'pilote' : ($role === 'copilote' ? 'copilote' : $p['role'] ?? '')) ?></span>
-                                                            <?php else: ?>
-                                                                <span class="role-badge role-valider"><?= htmlspecialchars(trim(($p['prenom'] ?? '') . ' ' . ($p['nom'] ?? ''))) ?></span>
-                                                                <span class="role-badge" style="background:#fbbf24; color:#78350f; font-size:0.75rem; padding:0.25rem 0.5rem; border-radius:999px;">à valider</span>
-                                                            <?php endif; ?>
+                                                            <span class="<?= ($role === 'pilote') ? 'role-badge role-pilote' : (($role === 'copilote') ? 'role-badge role-copilote' : 'role-badge role-valider') ?>"><?= htmlspecialchars(trim(($p['prenom'] ?? '') . ' ' . ($p['nom'] ?? ''))) ?></span>
+                                                            <span class="role-badge" style="background:#6b7280; color:white; font-size:0.75rem; padding:0.25rem 0.5rem;"><?= htmlspecialchars($roleDisplay) ?></span>
                                                         </div>
                                                     <?php endforeach; ?>
                                                 </div>
@@ -420,32 +439,67 @@ include 'header.php';
 
 <!-- Section Participants -->
 <div class="gn-wrapper" style="margin-top: 3rem;">
-    <div class="gn-card">
-        <div class="gn-card-header"><h3 class="gn-card-title">👥 Inscrits (<?= count($inscrits) ?>)</h3></div>
+    <!-- Participants Affectés -->
+    <?php if (!empty($participants_affectes)): ?>
+    <div class="gn-card" style="margin-bottom: 2rem;">
+        <div class="gn-card-header"><h3 class="gn-card-title">✅ Participants confirmés (<?= count($participants_affectes) ?>)</h3></div>
         <div>
-            <?php if (!empty($inscrits)): ?>
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1.5rem;">
-                    <?php foreach ($inscrits as $inscrit): ?>
-                        <?php 
-                            // Utiliser le cache pré-calculé
-                            $userId = (int)$inscrit['id'];
-                            $photoPath = $photoCache[$userId] ?? '/assets/img/avatar-placeholder.svg';
-                            $fullName = trim(($inscrit['prenom'] ?? '') . ' ' . ($inscrit['nom'] ?? ''));
-                        ?>
-                        <div style="text-align: center;">
-                            <img src="<?= $photoPath ?>" alt="<?= htmlspecialchars($fullName) ?>" loading="lazy"
-                                 style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #e5e7eb; margin-bottom: 0.75rem;">
-                            <div style="font-weight: 600; font-size: 0.9rem; color: #1a1a1a; word-break: break-word;">
-                                <?= htmlspecialchars($fullName) ?>
-                            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1.5rem;">
+                <?php foreach ($participants_affectes as $inscrit): ?>
+                    <?php 
+                        // Utiliser le cache pré-calculé
+                        $userId = (int)$inscrit['id'];
+                        $photoPath = $photoCache[$userId] ?? '/assets/img/avatar-placeholder.svg';
+                        $fullName = trim(($inscrit['prenom'] ?? '') . ' ' . ($inscrit['nom'] ?? ''));
+                    ?>
+                    <div style="text-align: center;">
+                        <img src="<?= $photoPath ?>" alt="<?= htmlspecialchars($fullName) ?>" loading="lazy"
+                             style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #10b981; margin-bottom: 0.75rem;">
+                        <div style="font-weight: 600; font-size: 0.9rem; color: #1a1a1a; word-break: break-word;">
+                            <?= htmlspecialchars($fullName) ?>
                         </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <div class="text-muted">Aucun inscrit pour le moment.</div>
-            <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
         </div>
     </div>
+    <?php endif; ?>
+    
+    <!-- Liste d'Attente -->
+    <?php if (!empty($participants_waitlist)): ?>
+    <div class="gn-card">
+        <div class="gn-card-header"><h3 class="gn-card-title">⏳ Liste d'attente (<?= count($participants_waitlist) ?>)</h3></div>
+        <div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1.5rem;">
+                <?php foreach ($participants_waitlist as $inscrit): ?>
+                    <?php 
+                        // Utiliser le cache pré-calculé
+                        $userId = (int)$inscrit['id'];
+                        $photoPath = $photoCache[$userId] ?? '/assets/img/avatar-placeholder.svg';
+                        $fullName = trim(($inscrit['prenom'] ?? '') . ' ' . ($inscrit['nom'] ?? ''));
+                    ?>
+                    <div style="text-align: center;">
+                        <img src="<?= $photoPath ?>" alt="<?= htmlspecialchars($fullName) ?>" loading="lazy"
+                             style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #f59e0b; margin-bottom: 0.75rem;">
+                        <div style="font-weight: 600; font-size: 0.9rem; color: #1a1a1a; word-break: break-word;">
+                            <?= htmlspecialchars($fullName) ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+    
+    <!-- Message si aucun inscrit -->
+    <?php if (empty($participants_affectes) && empty($participants_waitlist)): ?>
+    <div class="gn-card">
+        <div class="gn-card-header"><h3 class="gn-card-title">👥 Participants</h3></div>
+        <div>
+            <div class="text-muted">Aucun inscrit pour le moment.</div>
+        </div>
+    </div>
+    <?php endif; ?>
 </div>
 
 <link rel="stylesheet" href="/assets/leaflet/leaflet.css?v=desk-20251203">

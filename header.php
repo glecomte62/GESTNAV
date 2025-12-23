@@ -20,18 +20,6 @@ require_once 'auth.php';
 
 <nav class="navbar navbar-expand-lg gn-navbar">
     <div class="container-fluid px-3 px-lg-4">
-        <a class="navbar-brand text-white d-flex align-items-center gap-2" href="index.php">
-            <img src="/assets/img/logo.jpg" alt="Logo club ULM" height="42"
-                 style="border-radius: 6px; box-shadow: 0 3px 8px rgba(0,0,0,0.3);">
-
-            <div class="d-flex flex-column lh-1">
-                <span class="fw-bold text-uppercase" style="font-size: 1.05rem;">
-                    GESTNAV ULM
-                </span>
-                <span style="font-size: .8rem; opacity: .85;">LFQJ – Espace membres</span>
-            </div>
-        </a>
-
         <button class="navbar-toggler text-white border-0" type="button"
                 data-bs-toggle="collapse" data-bs-target="#mainNav"
                 aria-controls="mainNav" aria-expanded="false" aria-label="Basculer la navigation">

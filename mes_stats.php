@@ -38,7 +38,7 @@ $years_evt = $pdo->prepare("SELECT DISTINCT YEAR(e.date_evenement) AS y FROM eve
 $years_evt->execute([$user_id]);
 $years_e = $years_evt->fetchAll(PDO::FETCH_COLUMN);
 
-$years_sort = $pdo->prepare("SELECT DISTINCT YEAR(s.date_sortie) AS y FROM sortie_inscriptions si JOIN sorties s ON s.id = si.sortie_id WHERE si.user_id = ? AND s.date_sortie IS NOT NULL ORDER BY y DESC");
+$years_sort = $pdo->prepare("SELECT DISTINCT YEAR(s.date_sortie) AS y FROM sortie_assignations sa JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id JOIN sorties s ON s.id = sm.sortie_id WHERE sa.user_id = ? AND s.date_sortie IS NOT NULL ORDER BY y DESC");
 $years_sort->execute([$user_id]);
 $years_s = $years_sort->fetchAll(PDO::FETCH_COLUMN);
 
@@ -71,16 +71,17 @@ if ($dateFilterEvt) {
     $total_personnes_evt = (int)$stmt->fetchColumn();
 }
 
-// Statistiques sorties
+// Statistiques sorties (affectations réelles)
 if ($dateFilterSort) {
-    $stmt = $pdo->prepare("SELECT COUNT(DISTINCT si.sortie_id)
-                           FROM sortie_inscriptions si
-                           JOIN sorties s ON s.id = si.sortie_id
-                           WHERE si.user_id = ? " . $dateFilterSort);
+    $stmt = $pdo->prepare("SELECT COUNT(DISTINCT sm.sortie_id)
+                           FROM sortie_assignations sa
+                           JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id
+                           JOIN sorties s ON s.id = sm.sortie_id
+                           WHERE sa.user_id = ? " . $dateFilterSort);
     $stmt->execute(array_merge([$user_id], $dateParams));
     $nb_sorties = (int)$stmt->fetchColumn();
 } else {
-    $stmt = $pdo->prepare("SELECT COUNT(DISTINCT sortie_id) FROM sortie_inscriptions WHERE user_id = ?");
+    $stmt = $pdo->prepare("SELECT COUNT(DISTINCT sm.sortie_id) FROM sortie_assignations sa JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id WHERE sa.user_id = ?");
     $stmt->execute([$user_id]);
     $nb_sorties = (int)$stmt->fetchColumn();
 }
@@ -95,21 +96,23 @@ try {
 $top_destinations = [];
 if ($hasDestinationId) {
     if ($dateFilterSort) {
-        $stmt = $pdo->prepare("SELECT ad.oaci, ad.nom, COUNT(s.id) AS nb
-                               FROM sortie_inscriptions si
-                               JOIN sorties s ON s.id = si.sortie_id
+        $stmt = $pdo->prepare("SELECT ad.oaci, ad.nom, COUNT(DISTINCT s.id) AS nb
+                               FROM sortie_assignations sa
+                               JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id
+                               JOIN sorties s ON s.id = sm.sortie_id
                                JOIN aerodromes_fr ad ON ad.id = s.destination_id
-                               WHERE si.user_id = ? " . $dateFilterSort . "
+                               WHERE sa.user_id = ? " . $dateFilterSort . "
                                GROUP BY ad.id, ad.oaci, ad.nom
                                ORDER BY nb DESC
                                LIMIT 5");
         $stmt->execute(array_merge([$user_id], $dateParams));
     } else {
-        $stmt = $pdo->prepare("SELECT ad.oaci, ad.nom, COUNT(s.id) AS nb
-                               FROM sortie_inscriptions si
-                               JOIN sorties s ON s.id = si.sortie_id
+        $stmt = $pdo->prepare("SELECT ad.oaci, ad.nom, COUNT(DISTINCT s.id) AS nb
+                               FROM sortie_assignations sa
+                               JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id
+                               JOIN sorties s ON s.id = sm.sortie_id
                                JOIN aerodromes_fr ad ON ad.id = s.destination_id
-                               WHERE si.user_id = ?
+                               WHERE sa.user_id = ?
                                GROUP BY ad.id, ad.oaci, ad.nom
                                ORDER BY nb DESC
                                LIMIT 5");
@@ -118,20 +121,22 @@ if ($hasDestinationId) {
     $top_destinations = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 }
 
-// Dernières activités
+// Dernières activités (affectations réelles)
 if ($dateFilterSort) {
-    $stmt = $pdo->prepare("SELECT s.id, s.titre, s.date_sortie, 'sortie' AS type
-                           FROM sortie_inscriptions si
-                           JOIN sorties s ON s.id = si.sortie_id
-                           WHERE si.user_id = ? " . $dateFilterSort . "
+    $stmt = $pdo->prepare("SELECT DISTINCT s.id, s.titre, s.date_sortie, 'sortie' AS type
+                           FROM sortie_assignations sa
+                           JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id
+                           JOIN sorties s ON s.id = sm.sortie_id
+                           WHERE sa.user_id = ? " . $dateFilterSort . "
                            ORDER BY s.date_sortie DESC
                            LIMIT 10");
     $stmt->execute(array_merge([$user_id], $dateParams));
 } else {
-    $stmt = $pdo->prepare("SELECT s.id, s.titre, s.date_sortie, 'sortie' AS type
-                           FROM sortie_inscriptions si
-                           JOIN sorties s ON s.id = si.sortie_id
-                           WHERE si.user_id = ?
+    $stmt = $pdo->prepare("SELECT DISTINCT s.id, s.titre, s.date_sortie, 'sortie' AS type
+                           FROM sortie_assignations sa
+                           JOIN sortie_machines sm ON sm.id = sa.sortie_machine_id
+                           JOIN sorties s ON s.id = sm.sortie_id
+                           WHERE sa.user_id = ?
                            ORDER BY s.date_sortie DESC
                            LIMIT 10");
     $stmt->execute([$user_id]);

@@ -525,7 +525,7 @@ try {
 $flash = null;
 
 // --- TRAITEMENT FORMULAIRE : AFFECTATIONS ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['assign']) || isset($_POST['submit_with_email']) || isset($_POST['no_email']))) {
     $send_emails = !isset($_POST['no_email']); // Si no_email est défini, on n'envoie pas de mail
     
     try {
@@ -579,11 +579,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
         }
         
         // Ne supprimer les anciennes affectations QUE si on a de nouvelles à enregistrer
-        if ($has_new_assignments) {
-            // Supprimer affectations existantes
-            $stmt = $pdo->prepare("DELETE FROM sortie_assignations WHERE sortie_machine_id IN (SELECT id FROM sortie_machines WHERE sortie_id = ?)");
-            $stmt->execute([$sortie_id]);
-        }
+        // MODIFICATION: Toujours supprimer les anciennes affectations pour permettre la suppression complète
+        // Supprimer affectations existantes
+        $stmt = $pdo->prepare("DELETE FROM sortie_assignations WHERE sortie_machine_id IN (SELECT id FROM sortie_machines WHERE sortie_id = ?)");
+        $stmt->execute([$sortie_id]);
         
         // Insérer les nouvelles affectations
         $sent_count = 0;

@@ -145,6 +145,39 @@ require_login();
     <h1 class="changelog-title">Historique</h1>
     <p class="changelog-subtitle">Suivi des mises a jour de GESTNAV ULM</p>
 
+    <!-- Version 2.4.5 -->
+    <div class="changelog-version-block">
+        <div class="changelog-version-header">
+            <span class="version-number">[2.4.5]</span>
+            <span class="version-date">2025-12-24</span>
+        </div>
+
+        <div class="changelog-section-added">
+            <h3 class="changelog-section-type">Added</h3>
+            <ul class="changelog-items">
+                <li><strong>Statistiques membre</strong>: Nouvelle page accessible aux administrateurs pour visualiser les statistiques de participation d'un membre (total inscriptions, affectations, taux de participation, historique détaillé). Accessible via un bouton "📊 Stats" dans la liste des membres.</li>
+                <li><strong>Distinction participants/liste d'attente</strong>: Dans la page d'information de sortie (sortie_info.php), les participants sont maintenant séparés en deux sections : "✅ Participants confirmés" (affectés à une machine) et "⏳ Liste d'attente" (inscrits mais non affectés), avec des bordures de couleur différentes (vert/orange).</li>
+            </ul>
+        </div>
+
+        <div class="changelog-section-changed">
+            <h3 class="changelog-section-type">Changed</h3>
+            <ul class="changelog-items">
+                <li><strong>Affichage des rôles</strong>: Dans sortie_info.php, le texte "à valider" a été remplacé par "CDB ou COPI" pour les membres affectés dont le rôle précis (pilote/copilote) n'est pas encore défini.</li>
+            </ul>
+        </div>
+
+        <div class="changelog-section-fixed">
+            <h3 class="changelog-section-type">Fixed</h3>
+            <ul class="changelog-items">
+                <li><strong>Validation sans email</strong>: Correction du bouton "Valider sans envoyer d'email" dans sortie_detail.php qui ne prenait pas en compte les modifications d'affectations. Le formulaire vérifie maintenant correctement les noms de boutons submit.</li>
+                <li><strong>Suppression d'affectations</strong>: Correction de la suppression complète des affectations - le bouton "Valider sans email" supprime maintenant correctement toutes les affectations existantes avant d'en créer de nouvelles, permettant de retirer complètement des personnes.</li>
+                <li><strong>Historique des emails</strong>: Correction de l'enregistrement des emails dans la table email_logs - les noms de colonnes ont été corrigés (recipient au lieu de recipient_email, body_html au lieu de message_html). Les emails envoyés apparaissent maintenant correctement dans l'historique.</li>
+                <li><strong>Pré-inscriptions orphelines</strong>: Lors de la désinscription d'un membre (via email ou admin), ses préférences de pré-inscription (machine/coéquipier) sont maintenant automatiquement supprimées, évitant les données incohérentes.</li>
+            </ul>
+        </div>
+    </div>
+
     <!-- Version 2.4.4 -->
     <div class="changelog-version-block">
         <div class="changelog-version-header">

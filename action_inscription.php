@@ -51,6 +51,14 @@ if (!$token) {
                         }
                     }
 
+                    // Supprimer les pré-inscriptions (préférences)
+                    try {
+                        $delPre = $pdo->prepare("DELETE FROM sortie_preinscriptions WHERE sortie_id = ? AND user_id = ?");
+                        $delPre->execute([$inscription['sortie_id'], $inscription['user_id']]);
+                    } catch (Throwable $e) {
+                        // Table peut ne pas exister
+                    }
+
                     // Supprimer l'inscription
                     $del = $pdo->prepare("DELETE FROM sortie_inscriptions WHERE action_token = ?");
                     $del->execute([$token]);
