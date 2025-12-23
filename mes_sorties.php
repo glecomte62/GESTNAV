@@ -14,16 +14,6 @@ try {
     $hasUlmBaseId = in_array('ulm_base_id', $cols, true);
 } catch (Throwable $e) {}
 
-// Vérifier si l'utilisateur est prioritaire
-$isPriorityUser = false;
-try {
-    $stP = $pdo->prepare('SELECT active FROM sortie_priorites WHERE user_id = ?');
-    $stP->execute([$user_id]);
-    $isPriorityUser = (bool)($stP->fetchColumn() ?? 0);
-} catch (Throwable $e) { 
-    $isPriorityUser = false; 
-}
-
 // Récupérer les sorties futures sur lesquelles l'utilisateur est inscrit
 try {
     $sqlFutures = "
@@ -102,7 +92,7 @@ try {
 }
 
 // Fonction pour afficher une sortie
-function render_sortie_card($sortie, $isPriorityUser = false, $isFuture = true) {
+function render_sortie_card($sortie, $isFuture = true) {
     $date_sortie = new DateTime($sortie['date_sortie']);
     $date_str = strftime('%A %d %B %Y à %H:%M', $date_sortie->getTimestamp());
     $date_str = mb_convert_case($date_str, MB_CASE_TITLE, 'UTF-8');
@@ -138,14 +128,6 @@ function render_sortie_card($sortie, $isPriorityUser = false, $isFuture = true) 
     ?>
     <div class="col">
         <div class="card h-100 shadow-sm hover-lift" style="border-radius: 1rem; overflow: hidden; transition: transform 0.2s;">
-            <?php if ($isPriorityUser && $isFuture): ?>
-            <div style="position: absolute; top: 10px; right: 10px; z-index: 10;">
-                <span class="badge" style="background: linear-gradient(135deg, #dc2626, #ef4444); color: white; padding: 0.5rem 0.8rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);" title="Vous êtes prioritaire sur cette sortie">
-                    🎯 PRIORITAIRE
-                </span>
-            </div>
-            <?php endif; ?>
-            
             <div style="height: 200px; overflow: hidden; background: linear-gradient(135deg, #004b8d, #00a0c6);">
                 <img src="<?= htmlspecialchars($photo_url) ?>" 
                      alt="<?= htmlspecialchars($sortie['titre']) ?>"
@@ -232,16 +214,6 @@ setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fra');
                     <i class="bi bi-arrow-left me-1"></i> Retour
                 </a>
             </div>
-            
-            <?php if ($isPriorityUser): ?>
-            <div class="alert alert-danger mt-3 d-flex align-items-center" role="alert" style="border-radius: 1rem;">
-                <i class="bi bi-trophy-fill me-2" style="font-size: 1.5rem;"></i>
-                <div>
-                    <strong>🎯 Vous êtes PRIORITAIRE !</strong><br>
-                    <small>Vous bénéficiez d'une priorité automatique sur votre prochaine inscription.</small>
-                </div>
-            </div>
-            <?php endif; ?>
         </div>
     </div>
     
@@ -263,7 +235,7 @@ setlocale(LC_TIME, 'fr_FR.UTF-8', 'fr_FR', 'fra');
             <?php else: ?>
                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
                     <?php foreach ($sorties_futures as $sortie): ?>
-                        <?php render_sortie_card($sortie, $isPriorityUser, true); ?>
+                        <?php render_sortie_card($sortie, true); ?>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>

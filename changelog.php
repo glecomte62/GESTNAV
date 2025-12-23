@@ -145,6 +145,26 @@ require_login();
     <h1 class="changelog-title">Historique</h1>
     <p class="changelog-subtitle">Suivi des mises a jour de GESTNAV ULM</p>
 
+    <!-- Version 2.4.4 -->
+    <div class="changelog-version-block">
+        <div class="changelog-version-header">
+            <span class="version-number">[2.4.4]</span>
+            <span class="version-date">2025-12-23</span>
+        </div>
+
+        <div class="changelog-section-added">
+            <h3 class="changelog-section-type">Added</h3>
+            <ul class="changelog-items">
+                <li><strong>Page Mes sorties</strong>: Nouvelle page permettant à chaque utilisateur de consulter un résumé de toutes les sorties sur lesquelles il est inscrit.</li>
+                <li>Affichage des sorties à venir avec informations complètes (date, destination, statut, repas prévu).</li>
+                <li>Historique des 20 dernières sorties passées auxquelles l'utilisateur était inscrit.</li>
+                <li>Lien "Mes sorties" ajouté dans le menu de navigation entre "Sorties" et "Propositions de sorties".</li>
+                <li>Design responsive avec cartes en grille (1, 2 ou 3 colonnes selon l'écran).</li>
+                <li>Effet hover sur les cartes pour une meilleure expérience utilisateur.</li>
+            </ul>
+        </div>
+    </div>
+
     <!-- Version 2.4.3 -->
     <div class="changelog-version-block">
         <div class="changelog-version-header">
