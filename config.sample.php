@@ -20,7 +20,7 @@ define('DB_PASS', 'CHANGEZ_MOI');        // Mot de passe MySQL
 // ============================================================================
 
 define('BASE_URL', 'https://votre-domaine.fr/gestnav');  // URL de base (sans slash final)
-define('GESTNAV_VERSION', '2.0.0');                       // Version de l'application
+define('GESTNAV_VERSION', '2.4.5');                       // Version de l'application
 
 // ============================================================================
 // ENVIRONNEMENT
