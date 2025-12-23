@@ -181,7 +181,7 @@ function render_sortie_card($sortie, $isFuture = true) {
             </div>
             
             <div class="card-footer bg-transparent border-0 pt-0 pb-3">
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-column flex-sm-row">
                     <a href="sortie_detail.php?id=<?= $sortie['id'] ?>" 
                        class="btn btn-primary flex-grow-1" 
                        style="border-radius: 999px; background: linear-gradient(135deg, #004b8d, #00a0c6); border: none;">
@@ -189,10 +189,10 @@ function render_sortie_card($sortie, $isFuture = true) {
                     </a>
                     <?php if ($isFuture): ?>
                     <a href="download_sortie_ics.php?id=<?= $sortie['id'] ?>" 
-                       class="btn btn-outline-primary" 
-                       style="border-radius: 999px;"
-                       title="Télécharger dans mon calendrier">
-                        <i class="bi bi-calendar-plus"></i>
+                       class="btn btn-outline-success" 
+                       style="border-radius: 999px; white-space: nowrap;"
+                       title="Ajouter au calendrier">
+                        <i class="bi bi-calendar-plus me-1"></i> Calendrier
                     </a>
                     <?php endif; ?>
                 </div>

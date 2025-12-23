@@ -81,9 +81,21 @@ function escapeICS($text) {
 
 // Déterminer la date de début et de fin
 $dtstart = formatDateICS($sortie['date_sortie']);
-$dtend = $sortie['date_fin'] ? formatDateICS($sortie['date_fin']) : formatDateICS(date('Y-m-d H:i:s', strtotime($sortie['date_sortie'] . ' +4 hours')));
+// Heure de fin : 18h le même jour (ou date_fin si spécifiée)
+if ($sortie['date_fin']) {
+    $dtend = formatDateICS($sortie['date_fin']);
+} else {
+    $date_sortie_obj = new DateTime($sortie['date_sortie']);
+    $date_fin_obj = clone $date_sortie_obj;
+    $date_fin_obj->setTime(18, 0, 0);
+    // Si l'heure de début est après 18h, on met la fin à 23h59
+    if ($date_sortie_obj->format('H') >= 18) {
+        $date_fin_obj->setTime(23, 59, 59);
+    }
+    $dtend = formatDateICS($date_fin_obj->format('Y-m-d H:i:s'));
+}
 
-// Construire la description
+// Construire la description avec un maximum de détails
 $description = '';
 if (!empty($sortie['description'])) {
     $description .= $sortie['description'];
@@ -97,6 +109,84 @@ if (!empty($sortie['repas_prevu'])) {
         $repas_text .= ": " . $sortie['repas_details'];
     }
     $description .= $repas_text;
+}
+
+// Ajouter les machines et assignations
+try {
+    $stmtMachines = $pdo->prepare("
+        SELECT 
+            m.nom,
+            m.immatriculation,
+            sm.id as sortie_machine_id
+        FROM sortie_machines sm
+        JOIN machines m ON m.id = sm.machine_id
+        WHERE sm.sortie_id = ?
+        ORDER BY m.immatriculation
+    ");
+    $stmtMachines->execute([$sortie_id]);
+    $machines = $stmtMachines->fetchAll(PDO::FETCH_ASSOC);
+    
+    if (count($machines) > 0) {
+        $description .= "\n\n✈️ MACHINES DISPONIBLES:\n";
+        
+        foreach ($machines as $machine) {
+            $description .= "\n• " . $machine['immatriculation'];
+            if (!empty($machine['nom'])) {
+                $description .= " (" . $machine['nom'] . ")";
+            }
+            
+            // Récupérer les assignations pour cette machine
+            $stmtAssign = $pdo->prepare("
+                SELECT 
+                    sa.role,
+                    u.prenom,
+                    u.nom
+                FROM sortie_assignations sa
+                JOIN users u ON u.id = sa.user_id
+                WHERE sa.sortie_machine_id = ?
+                ORDER BY sa.role DESC
+            ");
+            $stmtAssign->execute([$machine['sortie_machine_id']]);
+            $assignations = $stmtAssign->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (count($assignations) > 0) {
+                foreach ($assignations as $assign) {
+                    $role_icon = ($assign['role'] === 'pilote') ? '👨‍✈️' : '👤';
+                    $role_label = ($assign['role'] === 'pilote') ? 'Pilote' : 'Passager';
+                    $description .= "\n  " . $role_icon . " " . $role_label . ": " . $assign['prenom'] . " " . $assign['nom'];
+                }
+            } else {
+                $description .= "\n  (Places disponibles)";
+            }
+        }
+    }
+} catch (Exception $e) {
+    error_log("Erreur récupération machines pour ICS: " . $e->getMessage());
+}
+
+// Ajouter la liste des inscrits
+try {
+    $stmtInscrits = $pdo->prepare("
+        SELECT 
+            u.prenom,
+            u.nom,
+            si.created_at
+        FROM sortie_inscriptions si
+        JOIN users u ON u.id = si.user_id
+        WHERE si.sortie_id = ?
+        ORDER BY si.created_at ASC
+    ");
+    $stmtInscrits->execute([$sortie_id]);
+    $inscrits = $stmtInscrits->fetchAll(PDO::FETCH_ASSOC);
+    
+    if (count($inscrits) > 0) {
+        $description .= "\n\n👥 PARTICIPANTS INSCRITS (" . count($inscrits) . "):\n";
+        foreach ($inscrits as $inscrit) {
+            $description .= "\n• " . $inscrit['prenom'] . " " . $inscrit['nom'];
+        }
+    }
+} catch (Exception $e) {
+    error_log("Erreur récupération inscrits pour ICS: " . $e->getMessage());
 }
 
 // Déterminer le lieu
