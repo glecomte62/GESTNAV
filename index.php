@@ -759,7 +759,7 @@ usort($agenda, function($a, $b) {
                         
                         <?php if ($it['kind'] === 'sortie' && !empty($it['is_new'])): ?>
                         <!-- Bandeau NOUVEAU -->
-                        <div style="position: absolute; top: 80px; left: -40px; width: 200px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-align: center; transform: rotate(-45deg); z-index: 999; padding: 8px 0; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); border: 2px solid rgba(255, 255, 255, 0.3);">
+                        <div style="position: absolute; top: 15px; left: -40px; width: 200px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; text-align: center; transform: rotate(-45deg); z-index: 999; padding: 8px 0; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4); border: 2px solid rgba(255, 255, 255, 0.3);">
                             NOUVEAU
                         </div>
                         <?php endif; ?>
@@ -999,7 +999,7 @@ usort($agendaPassee, function($a, $b) {
                                 </div>
                                 <?php endif; ?>
                                 <?php if (!empty($it['is_new'])): ?>
-                                <div style="position: absolute; top: 80px; left: -40px; transform: rotate(-45deg); background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 60px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 8px rgba(0,0,0,0.3); letter-spacing: 2px; text-align: center;">
+                                <div style="position: absolute; top: 15px; left: -40px; transform: rotate(-45deg); background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 8px 60px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 8px rgba(0,0,0,0.3); letter-spacing: 2px; text-align: center;">
                                     NOUVEAU
                                 </div>
                                 <?php endif; ?>
