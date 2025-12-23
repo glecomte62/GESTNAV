@@ -155,6 +155,8 @@ require_login();
         <div class="changelog-section-added">
             <h3 class="changelog-section-type">Added</h3>
             <ul class="changelog-items">
+                <li><strong>Bandeau NOUVEAU</strong>: Les sorties créées il y a moins de 7 jours affichent maintenant un bandeau vert "NOUVEAU" en haut à gauche de la carte, permettant de repérer facilement les nouvelles opportunités de vol.</li>
+                <li><strong>Bandeau COMPLET</strong>: Les sorties dont toutes les machines sont complètes (2 places occupées sur chaque machine) affichent un bandeau rouge "COMPLET" pour informer visuellement les membres.</li>
                 <li><strong>Page Mes sorties</strong>: Nouvelle page permettant à chaque utilisateur de consulter un résumé de toutes les sorties sur lesquelles il est inscrit.</li>
                 <li>Affichage des sorties à venir avec informations complètes (date, destination, statut, repas prévu).</li>
                 <li>Historique des 20 dernières sorties passées auxquelles l'utilisateur était inscrit.</li>
