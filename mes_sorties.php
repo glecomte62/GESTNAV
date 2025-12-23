@@ -192,7 +192,7 @@ function render_sortie_card($sortie, $isFuture = true) {
                        class="btn btn-outline-success" 
                        style="border-radius: 999px; white-space: nowrap;"
                        title="Ajouter au calendrier">
-                        <i class="bi bi-calendar-plus me-1"></i> Calendrier
+                        <i class="bi bi-calendar-plus me-1"></i> Ajouter à mon agenda
                     </a>
                     <?php endif; ?>
                 </div>
