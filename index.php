@@ -56,6 +56,40 @@ try {
     $stmt = $pdo->prepare($sqlSorties);
     $stmt->execute([$now]);
     $sorties = $stmt->fetchAll();
+    
+    // Vérifier pour chaque sortie si toutes les machines sont complètes
+    foreach ($sorties as &$sortie) {
+        $sortie['is_full'] = false;
+        try {
+            // Récupérer le nombre total de places disponibles et occupées
+            $stmtMachines = $pdo->prepare("
+                SELECT 
+                    m.capacite,
+                    COUNT(sa.id) as places_prises
+                FROM sortie_machines sm
+                JOIN machines m ON m.id = sm.machine_id
+                LEFT JOIN sortie_assignations sa ON sa.sortie_machine_id = sm.id
+                WHERE sm.sortie_id = ?
+                GROUP BY sm.id, m.capacite
+            ");
+            $stmtMachines->execute([$sortie['id']]);
+            $machines = $stmtMachines->fetchAll();
+            
+            if (count($machines) > 0) {
+                $allFull = true;
+                foreach ($machines as $machine) {
+                    if ($machine['places_prises'] < $machine['capacite']) {
+                        $allFull = false;
+                        break;
+                    }
+                }
+                $sortie['is_full'] = $allFull;
+            }
+        } catch (Exception $e) {
+            error_log("Erreur vérification places sortie " . $sortie['id'] . ": " . $e->getMessage());
+        }
+    }
+    unset($sortie);
 } catch (Exception $e) {
     $sorties = [];
     error_log("Erreur requête sorties: " . $e->getMessage());
@@ -116,6 +150,39 @@ try {
     $stmt = $pdo->prepare($sqlSortiesPassees);
     $stmt->execute([$now]);
     $sortiesPassees = $stmt->fetchAll();
+    
+    // Vérifier pour chaque sortie passée si toutes les machines étaient complètes
+    foreach ($sortiesPassees as &$sortie) {
+        $sortie['is_full'] = false;
+        try {
+            $stmtMachines = $pdo->prepare("
+                SELECT 
+                    m.capacite,
+                    COUNT(sa.id) as places_prises
+                FROM sortie_machines sm
+                JOIN machines m ON m.id = sm.machine_id
+                LEFT JOIN sortie_assignations sa ON sa.sortie_machine_id = sm.id
+                WHERE sm.sortie_id = ?
+                GROUP BY sm.id, m.capacite
+            ");
+            $stmtMachines->execute([$sortie['id']]);
+            $machines = $stmtMachines->fetchAll();
+            
+            if (count($machines) > 0) {
+                $allFull = true;
+                foreach ($machines as $machine) {
+                    if ($machine['places_prises'] < $machine['capacite']) {
+                        $allFull = false;
+                        break;
+                    }
+                }
+                $sortie['is_full'] = $allFull;
+            }
+        } catch (Exception $e) {
+            error_log("Erreur vérification places sortie passée " . $sortie['id'] . ": " . $e->getMessage());
+        }
+    }
+    unset($sortie);
 } catch (Exception $e) {
     $sortiesPassees = [];
     error_log("Erreur requête sorties passées: " . $e->getMessage());
@@ -614,6 +681,7 @@ foreach ($sorties as $s) {
         'repas_details' => $s['repas_details'] ?? '',
         'inscrits' => (int)($s['nb_inscrits'] ?? 0),
         'photo' => $s['photo_filename'] ?? null,
+        'is_full' => $s['is_full'] ?? false,
     ];
 }
 foreach ($evenements as $e) {
@@ -654,7 +722,15 @@ usort($agenda, function($a, $b) {
         <div class="row g-3">
             <?php foreach ($agenda as $it): ?>
                 <div class="col-md-6 col-lg-4">
-                    <div class="gn-card" style="height: 100%; display: flex; flex-direction: column; overflow:hidden; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(26,135,203,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                    <div class="gn-card" style="height: 100%; display: flex; flex-direction: column; overflow:hidden; transition: transform 0.2s, box-shadow 0.2s; position: relative;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(26,135,203,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'">
+                        
+                        <?php if ($it['kind'] === 'sortie' && !empty($it['is_full'])): ?>
+                        <!-- Bandeau COMPLET -->
+                        <div style="position: absolute; top: 30px; left: -40px; width: 200px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #000; text-align: center; transform: rotate(-45deg); z-index: 1000; padding: 8px 0; font-weight: 900; font-size: 1.1rem; letter-spacing: 2px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); border: 2px solid rgba(255, 255, 255, 0.3);">
+                            COMPLET
+                        </div>
+                        <?php endif; ?>
+                        
                         <?php if ($it['kind'] === 'evenement'): ?>
                             <div style="width:100%; aspect-ratio:16/9; background:#f2f6fc; overflow:hidden;">
                                 <?php if (!empty($it['cover'])): ?>
@@ -820,6 +896,7 @@ foreach ($sortiesPassees as $s) {
         'repas_details' => $s['repas_details'] ?? '',
         'inscrits' => (int)($s['nb_inscrits'] ?? 0),
         'photo' => $s['photo_filename'] ?? null,
+        'is_full' => $s['is_full'] ?? false,
     ];
 }
 foreach ($evenementsPassees as $e) {
@@ -882,6 +959,11 @@ usort($agendaPassee, function($a, $b) {
                                 <div style="position: absolute; top: 8px; right: 8px; background-color: #dc3545; color: white; padding: 4px 12px; border-radius: 4px; font-weight: 600; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
                                     Terminé
                                 </div>
+                                <?php if (!empty($it['is_full'])): ?>
+                                <div style="position: absolute; top: 30px; left: -40px; transform: rotate(-45deg); background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 8px 60px; font-weight: 700; font-size: 0.9rem; box-shadow: 0 4px 8px rgba(0,0,0,0.3); letter-spacing: 2px; text-align: center;">
+                                    COMPLET
+                                </div>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
 
