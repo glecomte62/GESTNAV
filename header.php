@@ -148,6 +148,12 @@ require_once 'auth.php';
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'mes_sorties.php' ? 'active' : '' ?>"
+                           href="mes_sorties.php">
+                            <i class="bi bi-calendar-check me-1"></i> Mes sorties
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link <?= basename($_SERVER['PHP_SELF']) === 'sortie_proposals_list.php' ? 'active' : '' ?>"
                            href="sortie_proposals_list.php">
                             <i class="bi bi-lightbulb me-1"></i> Propositions de sorties
