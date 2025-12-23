@@ -526,6 +526,8 @@ $flash = null;
 
 // --- TRAITEMENT FORMULAIRE : AFFECTATIONS ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
+    $send_emails = !isset($_POST['no_email']); // Si no_email est défini, on n'envoie pas de mail
+    
     try {
         // Créer la table de logs si elle n'existe pas (AVANT la transaction)
         try {
@@ -646,8 +648,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
         $affectes_ids = array_column($assignations_to_notify, 'user_id');
         $non_affectes = array_filter($all_inscrits, fn($i) => !in_array($i['user_id'], $affectes_ids));
         
-        // Envoyer mails de confirmation aux AFFECTÉS
-        foreach ($assignations_to_notify as $aff) {
+        // Envoyer mails de confirmation aux AFFECTÉS (seulement si $send_emails est true)
+        if ($send_emails) {
+            foreach ($assignations_to_notify as $aff) {
             if (empty($aff['email'])) {
                 $failed_count++;
                 continue;
@@ -760,13 +763,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
             } else {
                 $failed_count++;
             }
-        }
+            }
+        } // Fin du if ($send_emails)
         
         // Envoyer emails d'excuse aux NON-AFFECTÉS et les marquer prioritaires
         $excuse_sent = 0;
         $excuse_failed = 0;
         
-        foreach ($non_affectes as $na) {
+        if ($send_emails) {
+            foreach ($non_affectes as $na) {
             if (empty($na['email'])) {
                 $excuse_failed++;
                 continue;
@@ -885,13 +890,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
             } else {
                 $excuse_failed++;
             }
-        }
+            }
+        } // Fin du if ($send_emails) pour non-affectés
         
         $pdo->commit();
         
-        $flash_text = "Affectations enregistrées. $sent_count confirmation(s) envoyée(s).";
-        if ($excuse_sent > 0) {
-            $flash_text .= " $excuse_sent email(s) d'excuse envoyé(s) aux non-affectés (désormais prioritaires).";
+        if ($send_emails) {
+            $flash_text = "Affectations enregistrées. $sent_count confirmation(s) envoyée(s).";
+            if ($excuse_sent > 0) {
+                $flash_text .= " $excuse_sent email(s) d'excuse envoyé(s) aux non-affectés (désormais prioritaires).";
+            }
+        } else {
+            $flash_text = "Affectations enregistrées sans envoi d'email.";
         }
         if ($failed_count + $excuse_failed > 0) {
             $flash_text .= " " . ($failed_count + $excuse_failed) . " en erreur.";
@@ -1897,8 +1907,11 @@ require 'header.php'; ?>
                 </div>
 
                 <div class="form-footer">
-                    <button type="submit" class="btn-primary-gestnav" id="affectationsSubmit">
+                    <button type="submit" class="btn-primary-gestnav" id="affectationsSubmit" name="submit_with_email">
                         Valider les affectations et envoyer les confirmations
+                    </button>
+                    <button type="submit" class="btn btn-secondary" id="affectationsSubmitNoEmail" name="no_email" value="1" style="margin-left: 10px;">
+                        Valider sans envoyer d'email
                     </button>
                 </div>
             <?php endif; ?>
