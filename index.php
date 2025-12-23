@@ -89,6 +89,20 @@ try {
                     $stmtCount->execute([$machine['sortie_machine_id']]);
                     $places_prises = (int)$stmtCount->fetch()['nb'];
                     
+                    // Ajouter les invités
+                    try {
+                        $stmtGuests = $pdo->prepare("
+                            SELECT COUNT(*) as nb
+                            FROM sortie_assignations_guests
+                            WHERE sortie_machine_id = ?
+                        ");
+                        $stmtGuests->execute([$machine['sortie_machine_id']]);
+                        $invites = (int)$stmtGuests->fetch()['nb'];
+                        $places_prises += $invites;
+                    } catch (Exception $e) {
+                        // Table n'existe peut-être pas encore
+                    }
+                    
                     if ($places_prises < $capacite_par_machine) {
                         $allFull = false;
                         break;
