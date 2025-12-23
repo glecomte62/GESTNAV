@@ -529,7 +529,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
     $send_emails = !isset($_POST['no_email']); // Si no_email est défini, on n'envoie pas de mail
     
     try {
-        // Créer la table de logs si elle n'existe pas (AVANT la transaction)
+        // Créer les tables si elles n'existent pas (AVANT la transaction car DDL fait un commit implicite)
         try {
             $pdo->exec("CREATE TABLE IF NOT EXISTS affectations_logs (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -548,6 +548,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
         } catch (Throwable $e) {
             // Table existe déjà, c'est OK
+        }
+        
+        try {
+            $pdo->exec("CREATE TABLE IF NOT EXISTS sortie_assignations_guests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                sortie_machine_id INT NOT NULL,
+                guest_name VARCHAR(255) NOT NULL,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_sortie_machine (sortie_machine_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+        } catch (Throwable $e) {
+            // Table existe déjà
         }
         
         $pdo->beginTransaction();
@@ -625,19 +637,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign'])) {
         
         // Traiter les invités
         $guest_names = $_POST['guest_name'] ?? [];
-        
-        // Créer la table des invités si elle n'existe pas
-        try {
-            $pdo->exec("CREATE TABLE IF NOT EXISTS sortie_assignations_guests (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                sortie_machine_id INT NOT NULL,
-                guest_name VARCHAR(255) NOT NULL,
-                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_sortie_machine (sortie_machine_id)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-        } catch (Throwable $e) {
-            // Table existe déjà
-        }
         
         // Supprimer les anciens invités pour cette sortie
         if ($has_new_assignments) {
